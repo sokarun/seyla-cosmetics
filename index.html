@@ -1839,6 +1839,12 @@ async function processBulkUpload(files){
     // Try full format first: SYL-COS-001
     const mFull=filename.match(/^(SYL-[A-Z]+-\d+)$/i);
     if(mFull) return mFull[1].toUpperCase();
+    // Explicit: in1, in2... → SYL-INS-001 (Instant)
+    const mInstant=filename.match(/^in(\d+)$/i);
+    if(mInstant) return 'SYL-INS-'+String(parseInt(mInstant[1])).padStart(3,'0');
+    // Explicit: r1, r2... → SYL-RMN-001 (Ramen)
+    const mRamen=filename.match(/^r(\d+)$/i);
+    if(mRamen) return 'SYL-RMN-'+String(parseInt(mRamen[1])).padStart(3,'0');
     // Try short format: C01, CO1, COS001, COS-001 etc
     const mShort=filename.match(/^([A-Z]+)-?(\d+)$/i);
     if(mShort){
