@@ -822,10 +822,17 @@ async function loadImageMap() {
     });
     const files = await res.json();
     if (!Array.isArray(files)) return;
-    const map = {};
+    const map = {}, mapScore = {};
+    const priority = {'jpg':1,'jpeg':1,'png':1,'webp':2,'bmp':3,'gif':4};
     files.forEach(f => {
       const m = f.name.match(/^(SYL-[A-Z]+-\d+)/);
-      if (m && !map[m[1]]) map[m[1]] = IMG_BUCKET + f.name;
+      if (!m) return;
+      const ext = (f.name.split('.').pop()||'').toLowerCase();
+      const score = priority[ext] || 9;
+      if (!map[m[1]] || score < (mapScore[m[1]]||9)) {
+        map[m[1]] = IMG_BUCKET + f.name;
+        mapScore[m[1]] = score;
+      }
     });
     products.forEach(p => { if (map[p.sku] && !p.image_url) p.image_url = map[p.sku]; });
   } catch(e) {}
