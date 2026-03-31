@@ -834,7 +834,7 @@ async function loadImageMap() {
         mapScore[m[1]] = score;
       }
     });
-    products.forEach(p => { if (map[p.sku] && !p.image_url) p.image_url = map[p.sku]; });
+    products.forEach(p => { if (map[p.sku]) p.image_url = map[p.sku]; });
   } catch(e) {}
 }
 
