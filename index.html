@@ -829,7 +829,6 @@ async function loadImageMap() {
       if (!m) return;
       const ext = (f.name.split('.').pop()||'').toLowerCase();
       const score = priority[ext] || 9;
-      // Normalise known prefix mismatches (storage uses RMN, DB uses RAM)
       const sku = m[1].replace('SYL-RMN-','SYL-RAM-');
       if (!map[sku] || score < (mapScore[sku]||9)) {
         map[sku] = IMG_BUCKET + f.name;
