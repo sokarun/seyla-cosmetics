@@ -44,8 +44,8 @@ input,select,textarea{font-family:var(--font);}
 /* Loading */
 #ls{position:fixed;inset:0;z-index:9999;background:#17212b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s;}
 #ls.hide{opacity:0;pointer-events:none;}
-.ls-logo{width:88px;height:88px;border-radius:50%;overflow:hidden;border:2px solid rgba(201,168,76,.4);box-shadow:0 0 32px rgba(201,168,76,.3);animation:ls-pulse 2s ease-in-out infinite;background:#fff;}
-.ls-logo img{width:100%;height:100%;object-fit:cover;}
+.ls-logo{width:88px;height:88px;border-radius:50%;overflow:hidden;border:2px solid rgba(201,168,76,.4);box-shadow:0 0 32px rgba(201,168,76,.3);animation:ls-pulse 2s ease-in-out infinite;background:#fff;transform:translateZ(0);-webkit-transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.ls-logo img{width:100%;height:100%;object-fit:cover;transform:translateZ(0);-webkit-transform:translateZ(0);}
 .ls-name{font-size:18px;font-weight:600;color:#fff;letter-spacing:.5px;}
 .ls-sub{font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;}
 .ls-bar{width:120px;height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
@@ -58,8 +58,8 @@ input,select,textarea{font-family:var(--font);}
 
 /* Top bar */
 .topbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--nav-h);z-index:100;background:var(--tg-surface);border-bottom:1px solid var(--tg-sep);display:flex;align-items:center;padding:0 14px;gap:10px;}
-.tb-logo{width:38px;height:38px;border-radius:50%;overflow:hidden;background:#fff;flex-shrink:0;border:1.5px solid rgba(201,168,76,.5);}
-.tb-logo img{width:100%;height:100%;object-fit:cover;}
+.tb-logo{width:38px;height:38px;border-radius:50%;overflow:hidden;background:#fff;flex-shrink:0;border:1.5px solid rgba(201,168,76,.5);transform:translateZ(0);-webkit-transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.tb-logo img{width:100%;height:100%;object-fit:cover;transform:translateZ(0);-webkit-transform:translateZ(0);}
 .tb-info{flex:1;min-width:0;}
 .tb-name{font-size:13px;font-weight:400;color:var(--tg-text);line-height:1.2;}
 .tb-sub{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;}
@@ -356,6 +356,15 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
 
 /* Misc */
 .success-wrap{text-align:center;padding:28px 20px;}
+/* Guest phone lookup */
+.phone-lookup-wrap{padding:20px 14px;}
+.phone-lookup-card{background:var(--tg-surface);border-radius:14px;padding:24px 20px;border:1px solid var(--tg-sep);text-align:center;margin-bottom:20px;}
+.phone-lookup-icon{width:60px;height:60px;border-radius:50%;background:var(--tg-blue-dim);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+.phone-lookup-title{font-size:15px;font-weight:600;color:var(--tg-text);margin-bottom:6px;}
+.phone-lookup-sub{font-size:12px;color:var(--tg-text2);line-height:1.6;}
+/* Order results */
+.orders-wrap{padding:0 14px 20px;}
+.orders-result-count{font-size:11px;color:var(--tg-text2);margin-bottom:10px;text-align:center;}
 .success-icon{width:70px;height:70px;border-radius:50%;background:rgba(76,175,80,.15);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;animation:bounce-in .5s var(--spring);}
 @keyframes bounce-in{0%{transform:scale(0);}60%{transform:scale(1.15);}100%{transform:scale(1);}}
 .success-icon svg{width:32px;height:32px;stroke:#4CAF50;fill:none;stroke-width:2.5;stroke-linecap:round;}
@@ -440,6 +449,14 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
       </div>
       <div id="cartContent" style="display:none">
         <div id="cartItems"></div>
+        <!-- Guest login banner — hidden for logged-in users -->
+        <div id="cartLoginBanner" style="display:none;margin:0 14px 12px;background:rgba(42,171,238,.1);border:1px solid rgba(42,171,238,.3);border-radius:10px;padding:12px 14px">
+          <div style="font-size:12.5px;font-weight:600;color:var(--tg-blue);margin-bottom:4px">⚠️ Sign in required to order</div>
+          <div style="font-size:11.5px;color:var(--tg-text2);margin-bottom:10px;line-height:1.5">You need an account to place an order. Sign in or register — it only takes a minute!</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" style="flex:1;padding:10px 0;font-size:12px" onclick="closeModal();showLogin()">Sign In / Register</button>
+          </div>
+        </div>
         <div class="cart-summary">
           <div class="cart-sum-row"><span>Subtotal</span><span class="cart-sum-val" id="cartSubtotal">$0.00</span></div>
           <div class="cart-sum-row" id="discRow" style="display:none"><span id="discLabel">Discount</span><span class="cart-sum-val" style="color:var(--gold)" id="discVal">-$0.00</span></div>
@@ -845,6 +862,7 @@ const MOQ_WHOLESALE = 6;
 function getPrice(p, cartQty) {
   const qty = cartQty || 0;
   const isWhlRole = ['wholesale','admin','super_admin'].includes(currentRole);
+  // pending_wholesale → retail price (not approved yet)
   // Admin/Super Admin always see wholesale price (for management)
   const isAdminRole = ['admin','super_admin'].includes(currentRole);
   if (isWhlRole && p.wholesale_price_unit) {
@@ -892,8 +910,10 @@ function prodCardHTML(p, badge) {
   const inCart = cart.find(c=>c.sku===p.sku);
   const qty = inCart ? inCart.qty : 0;
   const {price,isWhl,retail,moqNote,whlPrice} = getPrice(p, qty);
-  const imgClick = p.image_url ? ' onclick="openLightbox(\''+p.sku+'\')" style="cursor:zoom-in"' : '';
-  const imgH = p.image_url ? '<img src="'+p.image_url+'" loading="lazy" onerror="errImg(this)">' : ph();
+  // onclick on BOTH wrapper div AND img — ensures touch works on iOS/Android
+  const lbAttr = p.image_url ? ' onclick="openLightbox(\''+p.sku+'\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0)"' : '';
+  const imgStyle = p.image_url ? ' onclick="event.stopPropagation();openLightbox(\''+p.sku+'\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);width:100%;height:100%;object-fit:cover;display:block"' : '';
+  const imgH = p.image_url ? '<img src="'+p.image_url+'" loading="lazy" onerror="errImg(this)"'+imgStyle+'>' : ph();
   const badgeH = badge ? '<div class="prod-badge badge-'+(badge==='HOT'?'hot':'new')+'">'+badge+'</div>' : '';
   const whlH = isWhl ? '<div style="position:absolute;top:6px;right:6px;background:var(--tg-blue);color:#fff;font-size:7px;font-weight:700;padding:2px 5px;border-radius:6px">WHL</div>' : '';
   const boxInfo = p.qty_per_box ? p.qty_per_box+'/box' : '';
@@ -916,14 +936,14 @@ function prodCardHTML(p, badge) {
   }
   const stockH = stockBadgeHTML(p);
   const actH = outOfStock ? '<span style="font-size:9px;color:#f44336;font-weight:600">Sold Out</span>' : (qty > 0 ? stepperHTML(p.sku,qty) : addBtnHTML(p.sku));
-  return '<div class="prod-card" data-sku="'+p.sku+'"'+(outOfStock?' style="opacity:.6"':'')+'><div class="prod-img-wrap"'+imgClick+'>'+badgeH+whlH+imgH+'</div><div class="prod-info">'+stockH+'<div class="prod-name">'+(p.name_english||p.name_korean||'Unknown')+'</div>'+(p.name_korean&&p.name_english?'<div class="prod-name-kr">'+p.name_korean+'</div>':'')+'<div class="prod-sku">'+skuLine+'</div><div class="prod-price-row"><div>'+priceH+'</div>'+actH+'</div></div></div>';
+  return '<div class="prod-card" data-sku="'+p.sku+'"'+(outOfStock?' style="opacity:.6"':'')+'><div class="prod-img-wrap"'+lbAttr+'>'+badgeH+whlH+imgH+'</div><div class="prod-info">'+stockH+'<div class="prod-name">'+(p.name_english||p.name_korean||'Unknown')+'</div>'+(p.name_korean&&p.name_english?'<div class="prod-name-kr">'+p.name_korean+'</div>':'')+'<div class="prod-sku">'+skuLine+'</div><div class="prod-price-row"><div>'+priceH+'</div>'+actH+'</div></div></div>';
 }
 
 function prodListHTML(p) {
   const inCart = cart.find(c=>c.sku===p.sku);
   const qty = inCart ? inCart.qty : 0;
   const {price,isWhl,retail,moqNote,whlPrice} = getPrice(p, qty);
-  const imgH = p.image_url ? '<img class="prod-list-img" src="'+p.image_url+'" loading="lazy" onclick="openLightbox(\''+p.sku+'\')" style="cursor:zoom-in" onerror="this.style.display=\'none\'">' : '<div class="prod-list-img" style="display:flex;align-items:center;justify-content:center">'+ph()+'</div>';
+  const imgH = p.image_url ? '<img class="prod-list-img" src="'+p.image_url+'" loading="lazy" onclick="openLightbox(\''+p.sku+'\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0)" onerror="this.style.display=\'none\'">' : '<div class="prod-list-img" style="display:flex;align-items:center;justify-content:center">'+ph()+'</div>';
   const boxInfo = p.qty_per_box ? p.qty_per_box+'/box' : '';
   const skuLine = p.sku + (boxInfo?' · '+boxInfo:'') + ' · ' + p.category;
   let priceH = '';
@@ -1127,6 +1147,30 @@ function updateCartUI() {
   const dv=document.getElementById('discVal'); if(dv)dv.textContent='-$'+discAmt.toFixed(2);
   const ce=document.getElementById('cartEmpty'); if(ce)ce.style.display=cart.length?'none':'flex';
   const cc=document.getElementById('cartContent'); if(cc)cc.style.display=cart.length?'block':'none';
+  // Show login banner for guests, hide for logged-in users
+  const banner=document.getElementById('cartLoginBanner');
+  const isGuest = !currentUser || !['retail','wholesale'].includes(currentRole);
+  if(banner) banner.style.display=(cart.length&&isGuest)?'block':'none';
+  // Auto-fill customer details if logged in
+  if(currentUser&&cart.length){
+    const nm=document.getElementById('oName');
+    const ph_el=document.getElementById('oPhone');
+    const st=document.getElementById('oStreet');
+    const loc=document.getElementById('oLocation');
+    if(nm&&!nm.value&&currentUser.full_name) nm.value=currentUser.full_name;
+    if(ph_el&&!ph_el.value&&(currentUser.phone||currentUser.telegram)){
+      ph_el.value=currentUser.phone||currentUser.telegram||'';
+    }
+    // Pre-fill address from registration profile
+    if(st&&!st.value&&currentUser.address) st.value=currentUser.address;
+    // Pre-fill district/location
+    if(loc&&!loc.value&&currentUser.district){
+      // Try to match option
+      const opts=Array.from(loc.options);
+      const match=opts.find(o=>o.value===currentUser.district||o.text===currentUser.district);
+      if(match) loc.value=match.value;
+    }
+  }
   const itemsEl=document.getElementById('cartItems');
   if(itemsEl) itemsEl.innerHTML=cart.map(item=>'<div class="cart-item">'+(item.image?'<img class="cart-item-img" src="'+item.image+'" alt="'+item.name+'">':'<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center">'+ph()+'</div>')+'<div class="cart-item-info"><div class="cart-item-name">'+item.name+'</div><div class="cart-item-sku">'+item.sku+'</div><div class="cart-item-bot"><div>'+stepperHTML(item.sku,item.qty)+'</div><div class="cart-item-price">$'+(item.price*item.qty).toFixed(2)+'</div></div></div><button class="cart-remove" onclick="removeFromCart(\''+item.sku+'\')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button></div>').join('');
 }
@@ -1155,6 +1199,15 @@ function flyToCart(event) {
 
 // ── Order ────────────────────────────────────────────────────────
 async function placeOrder() {
+  // ── Must be logged in to place order ──────────────────────────
+  if (!currentUser || !['retail','wholesale'].includes(currentRole)) {
+    closeModal();
+    setTimeout(() => {
+      showToast('Please sign in or register to place your order');
+      showLogin();
+    }, 100);
+    return;
+  }
   const name=document.getElementById('oName').value.trim();
   const phone=document.getElementById('oPhone').value.trim();
   const location=document.getElementById('oLocation').value;
@@ -1197,18 +1250,131 @@ async function placeOrder() {
   cart=[]; updateCartUI(); refreshCards();
   btn.disabled=false;
   btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Confirm Order';
-  ['oName','oPhone','oStreet','oLandmark','oNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  window._lastOrderPhone = phone; // Save for order tracking pre-fill
+  ['oName','oPhone','oStreet','oLandmark','oNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});;
   document.getElementById('oLocation').value='';
   openSheet('',`<div class="success-wrap"><div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="success-title">Order Confirmed!</div><div class="success-sub">We'll contact you via WhatsApp or Telegram shortly.</div><div class="success-po"><div><div class="success-po-lbl">Invoice</div><div class="success-po-num">${poNum}</div></div><div style="text-align:right"><div class="success-po-lbl">Total</div><div class="success-po-num">$${total.toFixed(2)}</div></div></div><button class="btn btn-primary" onclick="closeModal();goTab('orders')">Track My Order</button><div style="height:10px"></div><button class="btn btn-outline" onclick="closeModal();goTab('shop')" style="margin-top:8px">Continue Shopping</button></div>`);
   if(currentUser) loadOrders();
 }
 
 // ── Orders ───────────────────────────────────────────────────────
+function renderOrdersPage() {
+  const el = document.getElementById('ordersList');
+  if (!el) return;
+  if (currentUser && ['retail','wholesale'].includes(currentRole)) {
+    // Logged-in customer → load their orders
+    loadOrders();
+  } else if (!currentUser) {
+    // Guest → show phone lookup form
+    const lastPhone = document.getElementById('oPhone')?.value || '';
+    el.innerHTML = `<div class="phone-lookup-wrap">
+      <div class="phone-lookup-card">
+        <div class="phone-lookup-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tg-blue)" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div class="phone-lookup-title">Track Your Order</div>
+        <div class="phone-lookup-sub">Enter the phone number you used when placing your order</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone / Telegram</label>
+        <input class="form-input" id="trackPhone" placeholder="+855 or @telegram" value="${lastPhone.replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter')lookupOrdersByPhone()">
+      </div>
+      <div class="btn-wrap" style="padding-top:4px">
+        <button class="btn btn-primary" onclick="lookupOrdersByPhone()">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Find My Orders
+        </button>
+      </div>
+      <div id="guestOrderResults" style="margin-top:20px"></div>
+      <div style="margin-top:24px;text-align:center;padding-bottom:10px">
+        <div style="font-size:12px;color:var(--tg-text2);margin-bottom:10px">Want to save your order history?</div>
+        <button class="btn btn-outline" style="width:auto;padding:9px 22px;font-size:12px" onclick="showLogin()">Sign In / Register</button>
+      </div>
+    </div>`;
+  }
+}
+
+async function lookupOrdersByPhone() {
+  const phoneInput = document.getElementById('trackPhone');
+  const phone = phoneInput?.value.trim();
+  if (!phone) { showToast('Please enter your phone number'); return; }
+
+  const resultsEl = document.getElementById('guestOrderResults');
+  if (!resultsEl) return;
+
+  const btn = phoneInput?.parentElement?.nextElementSibling?.querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = 'Searching...'; }
+
+  resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tg-text2);font-size:12px">Searching your orders...</div>';
+
+  try {
+    if (!sb) throw new Error('No connection');
+    const { data } = await sb.from('orders').select('*').eq('phone', phone).order('created_at', { ascending: false }).limit(30);
+
+    if (!data || !data.length) {
+      resultsEl.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--tg-text2)">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="font-size:13px;font-weight:500;margin-bottom:6px">No orders found</div>
+        <div style="font-size:11.5px;line-height:1.6">No orders were found for <strong>${phone}</strong>.<br>Make sure to enter the exact number used when ordering.</div>
+      </div>`;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find My Orders'; }
+      return;
+    }
+
+    const sc = { pending:'s-pending', confirmed:'s-confirmed', preparing:'s-preparing', delivery:'s-delivery', delivered:'s-delivered', cancelled:'s-cancelled' };
+    const sl = { pending:'Received', confirmed:'Confirmed', preparing:'Preparing', delivery:'Out for Delivery', delivered:'Delivered', cancelled:'Cancelled' };
+
+    resultsEl.innerHTML = '<div class="orders-result-count">Found <strong>' + data.length + '</strong> order(s) for ' + phone + '</div>' +
+      '<div class="orders-wrap" style="padding:0">' +
+      data.map(o => {
+        const steps = safeParseJSON(o.tracking_steps, []);
+        const active = steps.filter(s => s.done).length;
+        const bars = [0,1,2,3,4].map(i => '<div style="flex:1;height:3px;border-radius:2px;background:' + (i < active ? 'var(--tg-blue)' : i === active ? 'var(--gold)' : 'var(--tg-sep)') + '"></div>').join('');
+        return '<div class="order-card" onclick=\'showOrderTracking(' + JSON.stringify(JSON.stringify(o)) + ')\' style="cursor:pointer">' +
+          '<div class="order-top">' +
+            '<div><div class="order-po">' + o.po_number + '</div><div class="order-date">' + new Date(o.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) + '</div></div>' +
+            '<span class="order-status ' + (sc[o.status] || 's-pending') + '">' + (sl[o.status] || o.status) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">' +
+            '<div style="font-size:12px;color:var(--tg-text2)">' + o.customer_name + (o.delivery_location ? ' · ' + o.delivery_location : '') + '</div>' +
+            '<div style="font-size:18px;font-weight:700;color:var(--tg-text);font-family:\'Cormorant Garamond\',serif">$' + parseFloat(o.total_usd || 0).toFixed(2) + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:3px;margin-top:10px">' + bars + '</div>' +
+          '<div style="font-size:10px;color:var(--tg-text2);margin-top:6px;text-align:right">Tap to track →</div>' +
+        '</div>';
+      }).join('') + '</div>';
+
+  } catch(e) {
+    resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:#f44336;font-size:12px">Connection error. Please try again.</div>';
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find My Orders'; }
+}
+
 async function loadOrders() {
   const el=document.getElementById('ordersList');
   if(!el||!sb) return;
   try {
-    const q=currentUser ? sb.from('orders').select('*').eq('customer_id',currentUser.id) : sb.from('orders').select('*');
+    let q;
+    if (['admin','super_admin','staff'].includes(currentRole)) {
+      // Admin sees all orders
+      q = sb.from('orders').select('*');
+    } else if (currentUser) {
+      // Customer: fetch by customer_id OR by phone (for guest orders with same phone)
+      const phone = currentUser.phone || '';
+      const uid = currentUser.id || '';
+      if (phone && uid) {
+        q = sb.from('orders').select('*').or(`customer_id.eq.${uid},phone.eq.${phone}`);
+      } else if (uid) {
+        q = sb.from('orders').select('*').eq('customer_id', uid);
+      } else if (phone) {
+        q = sb.from('orders').select('*').eq('phone', phone);
+      } else {
+        q = sb.from('orders').select('*').eq('customer_id', uid);
+      }
+    } else {
+      return; // Not logged in — use renderOrdersPage() instead
+    }
     const {data}=await q.order('created_at',{ascending:false}).limit(50);
     if(!data||!data.length){el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--tg-text2);font-size:13px">No orders yet</div>';return;}
     const sc={'pending':'s-pending','confirmed':'s-confirmed','preparing':'s-preparing','delivery':'s-delivery','delivered':'s-delivered','cancelled':'s-cancelled'};
@@ -1260,8 +1426,8 @@ function renderSettings() {
 
   // Profile header — no avatar here, avatar only in topbar
   if (u) {
-    const roleLabel=isSuperAdmin?'Super Administrator':isAdmin?'Administrator':currentRole==='wholesale'?'Wholesale':'Retail Customer';
-    html += '<div class="tg-profile-hdr" style="justify-content:center;flex-direction:column;align-items:center;padding:16px 16px 14px;gap:2px"><div class="tg-profile-name">'+(u.full_name||'User')+'</div>'+(u.phone?'<div class="tg-profile-phone">'+u.phone+'</div>':'')+'<div class="tg-profile-handle">'+roleLabel+'</div></div>';
+    const roleLabel=isSuperAdmin?'Super Administrator':isAdmin?'Administrator':currentRole==='wholesale'?'Wholesale':currentRole==='pending_wholesale'?'⏳ Pending Wholesale Approval':'Retail Customer';
+    html += '<div class="tg-profile-hdr" style="justify-content:center;flex-direction:column;align-items:center;padding:16px 16px 14px;gap:2px"><div class="tg-profile-name">'+(u.full_name||'User')+'</div>'+(u.phone?'<div class="tg-profile-phone">'+u.phone+'</div>':'')+'<div class="tg-profile-handle"'+( currentRole==='pending_wholesale'?' style="color:#f59e0b"':'')+'>'+roleLabel+'</div></div>';
   } else {
     html += '<div class="tg-profile-hdr" onclick="showLogin()" style="cursor:pointer;justify-content:center;padding:24px 16px"><div style="text-align:center"><div class="tg-profile-name" style="color:var(--tg-blue)">Sign In / Register</div><div class="tg-profile-phone">Tap to login to your account</div></div></div>';
   }
@@ -1330,7 +1496,130 @@ function renderSettings() {
 
 // ── Auth ─────────────────────────────────────────────────────────
 function showLogin() {
-  openSheet('Sign In','<div style="padding:0 0 24px"><div class="auth-tabs" id="authTabRow" style="margin-bottom:20px"><button class="auth-tab active" onclick="setAuthTab(\'login\',this)">Sign In</button><button class="auth-tab" onclick="setAuthTab(\'register\',this)">Register</button></div><div id="loginForm"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="loginEmail" placeholder="your@email.com" onkeydown="if(event.key===\'Enter\')document.getElementById(\'loginPw\').focus()"></div><div class="form-group"><label class="form-label">Password</label><input class="form-input" id="loginPw" type="password" placeholder="••••••••" onkeydown="if(event.key===\'Enter\')doLogin()"></div><div class="btn-wrap" style="padding:14px 0 0"><button class="btn btn-primary" onclick="doLogin()">Sign In</button></div><div style="text-align:center;margin-top:16px;font-size:13px;color:var(--tg-text2)">Staff? <button onclick="showStaffLogin()" style="color:var(--tg-blue);font-size:13px">Staff / Admin Login</button></div></div><div id="registerForm" style="display:none"><div class="auth-tabs" id="regTypeRow" style="margin-bottom:16px"><button class="auth-tab active" onclick="setRegType(\'retail\',this)">Retail</button><button class="auth-tab" onclick="setRegType(\'wholesale\',this)">Wholesale</button></div><div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="rName" placeholder="Your full name"></div><div class="form-group"><label class="form-label">Phone / Telegram *</label><input class="form-input" id="rPhone" placeholder="+855 or @telegram"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="rEmail" type="email" placeholder="your@email.com"></div><div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="rPw" type="password" placeholder="Min. 8 characters"></div><div id="whlWrap" style="display:none;background:var(--tg-surface2);border-radius:10px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--tg-text);margin-bottom:10px">Wholesale Requirements</div><label style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--tg-text2);margin-bottom:8px"><input type="checkbox" id="chkTG" style="accent-color:var(--tg-blue)"> Join <a href="https://t.me/seylacosmetic" style="color:var(--tg-blue)">@seylacosmetic</a></label><label style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--tg-text2)"><input type="checkbox" id="chkFB" style="accent-color:var(--tg-blue)"> Like our Facebook page</label></div><div class="btn-wrap" style="padding:8px 0 0"><button class="btn btn-primary" onclick="doRegister()">Create Account</button></div></div></div>');
+  const loginHTML = `
+<div style="padding:0 0 24px">
+  <div class="auth-tabs" id="authTabRow" style="margin-bottom:20px">
+    <button class="auth-tab active" onclick="setAuthTab('login',this)">Sign In</button>
+    <button class="auth-tab" onclick="setAuthTab('register',this)">Register</button>
+  </div>
+
+  <!-- SIGN IN FORM -->
+  <div id="loginForm">
+    <div class="form-group">
+      <label class="form-label">Phone Number</label>
+      <input class="form-input" id="loginEmail" type="tel" placeholder="0xx-xxx-xxx or your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('loginPw').focus()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="loginPw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="btn-wrap" style="padding:14px 0 0">
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--tg-text2)">
+      Staff? <button onclick="showStaffLogin()" style="color:var(--tg-blue);font-size:13px">Staff / Admin Login</button>
+    </div>
+  </div>
+
+  <!-- REGISTER FORM -->
+  <div id="registerForm" style="display:none">
+    <!-- Account Type -->
+    <div style="margin-bottom:16px">
+      <label class="form-label">Account Type *</label>
+      <div class="auth-tabs" id="regTypeRow" style="margin-top:6px">
+        <button class="auth-tab active" onclick="setRegType('retail',this)">🛍️ Retail</button>
+        <button class="auth-tab" onclick="setRegType('wholesale',this)">📦 Wholesale</button>
+      </div>
+      <div id="regTypeDesc" style="font-size:11px;color:var(--tg-text2);margin-top:8px;line-height:1.5;padding:8px 10px;background:var(--tg-surface2);border-radius:8px">
+        Retail: Buy products at retail price. Account activates immediately.
+      </div>
+    </div>
+
+    <!-- Personal Info -->
+    <div class="form-group">
+      <label class="form-label">Full Name *</label>
+      <input class="form-input" id="rName" placeholder="e.g. Sok Dara" maxlength="80"
+        onkeydown="if(event.key==='Enter')document.getElementById('rPhone').focus()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Phone Number * <span style="font-size:10px;color:var(--tg-text2)">(Cambodia format)</span></label>
+      <input class="form-input" id="rPhone" type="tel" placeholder="e.g. 0xx-xxx-xxx or +855 xx-xxx-xxx"
+        onkeydown="if(event.key==='Enter')document.getElementById('rTelegram').focus()">
+      <div id="rPhoneErr" style="display:none;font-size:11px;color:#f44336;margin-top:4px">⚠️ Please enter a valid Cambodia phone number</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Telegram Username <span style="font-size:10px;color:var(--tg-text2)">(optional)</span></label>
+      <input class="form-input" id="rTelegram" placeholder="e.g. @yourusername"
+        onkeydown="if(event.key==='Enter')document.getElementById('rAddress').focus()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Delivery Address <span style="font-size:10px;color:var(--tg-text2)">(House no., Street, Sangkat)</span></label>
+      <input class="form-input" id="rAddress" placeholder="e.g. #12, St. 271, Sangkat Boeng Kak"
+        onkeydown="if(event.key==='Enter')document.getElementById('rPw').focus()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">District / Area *</label>
+      <select class="form-select" id="rDistrictRetail">
+        <option value="">Select your area...</option>
+        <optgroup label="Phnom Penh">
+          <option>Chamkarmon</option><option>Daun Penh</option><option>7 Makara</option><option>Tuol Kork</option><option>Toul Tom Poung</option><option>Boeung Keng Kang</option><option>Por Senchey</option><option>Sen Sok</option><option>Russey Keo</option><option>Meanchey</option><option>Chbar Ampov</option><option>Dangkao</option><option>Kamboul</option><option>Praek Pnov</option>
+        </optgroup>
+        <optgroup label="Other Provinces">
+          <option>Siem Reap</option><option>Battambang</option><option>Sihanoukville</option><option>Kampong Cham</option><option>Kandal</option><option>Takeo</option><option>Other Province</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password *</label>
+      <input class="form-input" id="rPw" type="password" placeholder="Min. 8 characters"
+        onkeydown="if(event.key==='Enter')document.getElementById('rPwConfirm').focus()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Confirm Password *</label>
+      <input class="form-input" id="rPwConfirm" type="password" placeholder="Re-enter password"
+        onkeydown="if(event.key==='Enter')doRegister()">
+      <div id="rPwErr" style="display:none;font-size:11px;color:#f44336;margin-top:4px">⚠️ Passwords do not match</div>
+    </div>
+
+    <!-- Wholesale-only extra fields -->
+    <div id="whlWrap" style="display:none">
+      <div style="height:1px;background:var(--tg-sep);margin:8px 0 14px"></div>
+      <div style="font-size:11px;font-weight:600;color:var(--tg-blue);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">📦 Wholesale Details</div>
+
+      <div class="form-group">
+        <label class="form-label">Business / Shop Name *</label>
+        <input class="form-input" id="rBusiness" placeholder="e.g. Beauty Store Phnom Penh">
+      </div>
+
+      <div style="background:var(--tg-surface2);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--tg-text);margin-bottom:4px">Wholesale Requirements</div>
+        <div style="font-size:11px;color:var(--tg-text2);margin-bottom:10px;line-height:1.5">After registration, your account will be reviewed by admin before wholesale pricing is activated.</div>
+        <label style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--tg-text2);margin-bottom:10px;cursor:pointer">
+          <input type="checkbox" id="chkTG" style="accent-color:var(--tg-blue);width:16px;height:16px">
+          Join our Telegram channel <a href="https://t.me/seylacosmetic" target="_blank" style="color:var(--tg-blue)">@seylacosmetic</a>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--tg-text2);cursor:pointer">
+          <input type="checkbox" id="chkFB" style="accent-color:var(--tg-blue);width:16px;height:16px">
+          Like our Facebook page
+        </label>
+      </div>
+    </div>
+
+    <div class="btn-wrap" style="padding:8px 0 0">
+      <button class="btn btn-primary" onclick="doRegister()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Create Account
+      </button>
+    </div>
+  </div>
+</div>`;
+  openSheet('Sign In', loginHTML);
 }
 
 function setAuthTab(tab,el) {
@@ -1345,6 +1634,12 @@ function setRegType(type,el) {
   regType=type;
   document.querySelectorAll('#regTypeRow .auth-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  const desc=document.getElementById('regTypeDesc');
+  if(desc){
+    desc.textContent=type==='wholesale'
+      ?'Wholesale: Buy in bulk for your business. Account pending Super Admin approval before wholesale price activates.'
+      :'Retail: Buy products at retail price. Account activates immediately after registration.';
+  }
   document.getElementById('whlWrap').style.display=type==='wholesale'?'block':'none';
 }
 
@@ -1377,20 +1672,89 @@ async function doLogin() {
 }
 
 async function doRegister() {
-  const name=document.getElementById('rName')?.value.trim();
-  const phone=document.getElementById('rPhone')?.value.trim();
-  const email=document.getElementById('rEmail')?.value.trim();
-  const pass=document.getElementById('rPw')?.value;
-  if(!name||!phone||!pass){showToast('Please fill required fields');return;}
-  if(pass.length<8){showToast('Password min. 8 characters');return;}
-  if(regType==='wholesale'&&!document.getElementById('chkTG')?.checked){showToast('Please join our Telegram channel first');return;}
+  const name     = document.getElementById('rName')?.value.trim();
+  const phone    = document.getElementById('rPhone')?.value.trim();
+  const telegram = document.getElementById('rTelegram')?.value.trim();
+  const address  = document.getElementById('rAddress')?.value.trim();
+  const district = document.getElementById('rDistrictRetail')?.value;
+  const pass     = document.getElementById('rPw')?.value;
+  const passConf = document.getElementById('rPwConfirm')?.value;
+  const business = document.getElementById('rBusiness')?.value.trim();
+
+  // Hide inline errors
+  const phoneErr = document.getElementById('rPhoneErr');
+  const pwErr    = document.getElementById('rPwErr');
+  if (phoneErr) phoneErr.style.display = 'none';
+  if (pwErr)    pwErr.style.display    = 'none';
+
+  // ── Validation ──────────────────────────────────────────────
+  if (!name)  { showToast('Please enter your full name'); return; }
+  if (!phone) { showToast('Please enter your phone number'); return; }
+
+  const phoneRegex = /^(\+855\s?|0)(1[0-9]|[6-9][0-9])\s?[\d]{3}\s?[\d]{3,4}$/;
+  if (!phoneRegex.test(phone.replace(/[-\s]/g,''))) {
+    if (phoneErr) { phoneErr.style.display='block'; phoneErr.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+    showToast('Please enter a valid Cambodia phone number'); return;
+  }
+
+  if (!district) { showToast('Please select your district/area'); return; }
+  if (!pass)    { showToast('Please enter a password'); return; }
+  if (pass.length < 8) { showToast('Password must be at least 8 characters'); return; }
+  if (pass !== passConf) {
+    if (pwErr) { pwErr.style.display='block'; pwErr.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+    showToast('Passwords do not match'); return;
+  }
+
+  // Wholesale extra validation
+  if (regType === 'wholesale') {
+    if (!business) { showToast('Please enter your business/shop name'); return; }
+    if (!document.getElementById('chkTG')?.checked) {
+      showToast('Please join our Telegram channel @seylacosmetic first'); return;
+    }
+  }
+
+  // ── Role logic ───────────────────────────────────────────────
+  // Retail → active immediately as 'retail'
+  // Wholesale → pending Super Admin approval as 'pending_wholesale'
+  const assignedRole = (regType === 'wholesale') ? 'pending_wholesale' : 'retail';
+
+  // ── Create account ──────────────────────────────────────────
   try {
-    let uid=null;
-    if(email&&sb){const {data}=await sb.auth.signUp({email,password:pass});if(data?.user)uid=data.user.id;}
-    const profile={id:uid||crypto.randomUUID(),full_name:name,phone,email:email||null,role:regType,tg_verified:document.getElementById('chkTG')?.checked||false};
-    if(sb)await sb.from('user_profiles').upsert(profile);
-    closeModal(); loginAs(profile);
-  } catch(e){closeModal();loginAs({role:regType,full_name:name,phone,email});}
+    const profile = {
+      id:            crypto.randomUUID(),
+      full_name:     name,
+      phone:         phone,
+      telegram:      telegram || null,
+      address:       address  || null,
+      district:      district || null,
+      role:          assignedRole,
+      business_name: business || null,
+      tg_verified:   document.getElementById('chkTG')?.checked || false,
+      fb_verified:   document.getElementById('chkFB')?.checked || false,
+    };
+    if (sb) await sb.from('user_profiles').upsert(profile);
+    closeModal();
+
+    if (regType === 'wholesale') {
+      // Wholesale: inform pending — login as retail temporarily so they can browse
+      showToast('Account created! Waiting for admin approval to activate wholesale pricing.');
+      const tempProfile = {...profile, role:'retail'};
+      loginAs(tempProfile);
+    } else {
+      showToast('Account created! Welcome to Seyla Cosmetics 🌸');
+      loginAs(profile);
+    }
+  } catch(e) {
+    closeModal();
+    const tempProfile = {
+      role: regType === 'wholesale' ? 'retail' : 'retail',
+      full_name: name, phone, telegram: telegram||null,
+      address: address||null, district: district||null,
+    };
+    if (regType === 'wholesale') showToast('Account created! Waiting for admin approval.');
+    else showToast('Account created! Welcome 🌸');
+    loginAs(tempProfile);
+  }
 }
 
 function loginAs(profile) {
@@ -1414,14 +1778,14 @@ function loginAs(profile) {
   }
   updateAuthUI(); renderShop();
   showToast('Welcome, '+(profile.full_name?.split(' ')[0]||'!')+' 👋');
-  if(['retail','wholesale'].includes(currentRole)) loadOrders();
+  if(['retail','wholesale'].includes(currentRole)) renderOrdersPage();
 }
 
 function updateAuthUI() {
   const isLogged=!!currentUser;
   const isAdmin=['super_admin','admin','staff'].includes(currentRole);
   const ordTab=document.getElementById('tab-orders');
-  if(ordTab) ordTab.style.display=(isLogged&&!isAdmin)?'flex':'none';
+  if(ordTab) ordTab.style.display=(!isAdmin)?'flex':'none';
   // Hide cart button and tab for admin
   const cartBtn=document.getElementById('cartBtn');
   const cartTab=document.getElementById('tab-cart');
@@ -1527,11 +1891,53 @@ async function showAdminKPI() {
 async function showAdminUsers() {
   openSheet('Customer Accounts','<div id="adminUserList" style="padding:0 0 24px"><div style="text-align:center;padding:20px;color:var(--tg-text2)">Loading...</div></div>');
   try {
-    const {data}=await sb.from('user_profiles').select('*').order('created_at',{ascending:false}).limit(50);
+    const {data}=await sb.from('user_profiles').select('*').order('created_at',{ascending:false}).limit(100);
     const el=document.getElementById('adminUserList');
     if(!data||!data.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--tg-text2)">No registered customers</div>';return;}
-    el.innerHTML=data.map(u=>'<div style="display:flex;align-items:center;justify-content:space-between;background:var(--tg-surface2);border-radius:10px;padding:11px 13px;margin-bottom:7px"><div><div style="font-weight:500;font-size:13px;color:var(--tg-text)">'+(u.full_name||'—')+'</div><div style="font-size:10.5px;color:var(--tg-text2);margin-top:2px">'+(u.phone||'—')+' · '+u.role+'</div></div>'+(u.subscription_plan?'<div style="font-size:9.5px;background:rgba(201,168,76,.15);color:var(--gold);padding:3px 9px;border-radius:10px;font-weight:600">'+u.subscription_plan.toUpperCase()+'</div>':'')+'</div>').join('');
-  } catch(e){}
+
+    const pending = data.filter(u=>u.role==='pending_wholesale');
+    const others  = data.filter(u=>u.role!=='pending_wholesale');
+
+    let html = '';
+    if (pending.length) {
+      html += '<div style="font-size:10px;font-weight:700;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:4px">⏳ Pending Wholesale Approval ('+pending.length+')</div>';
+      html += pending.map(u=>{
+        const tg = u.telegram ? ' · '+u.telegram : '';
+        const biz = u.business_name ? '<div style="font-size:10px;color:var(--tg-text2)">🏪 '+u.business_name+'</div>' : '';
+        const dist = u.district ? ' · '+u.district : '';
+        return '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:11px 13px;margin-bottom:8px">'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+          +'<div style="min-width:0;flex:1"><div style="font-weight:600;font-size:13px;color:var(--tg-text)">'+(u.full_name||'—')+'</div>'
+          +'<div style="font-size:10.5px;color:var(--tg-text2);margin-top:2px">'+(u.phone||'—')+tg+dist+'</div>'
+          +biz+'</div>'
+          +'<button onclick="approveWholesale(\''+u.id+'\')" style="flex-shrink:0;background:var(--tg-blue);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">✓ Approve</button>'
+          +'</div></div>';
+      }).join('');
+      html += '<div style="height:1px;background:var(--tg-sep);margin:10px 0 12px"></div>';
+    }
+
+    html += '<div style="font-size:10px;font-weight:700;color:var(--tg-text2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">All Customers ('+others.length+')</div>';
+    html += others.map(u=>{
+      const roleColor = u.role==='wholesale'?'var(--gold)':u.role==='retail'?'var(--tg-blue)':'var(--tg-text2)';
+      const roleLabel = u.role==='wholesale'?'Wholesale':u.role==='retail'?'Retail':'Staff';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--tg-surface2);border-radius:10px;padding:11px 13px;margin-bottom:7px">'
+        +'<div><div style="font-weight:500;font-size:13px;color:var(--tg-text)">'+(u.full_name||'—')+'</div>'
+        +'<div style="font-size:10.5px;color:var(--tg-text2);margin-top:2px">'+(u.phone||'—')+(u.district?' · '+u.district:'')+'</div></div>'
+        +'<div style="font-size:10px;color:'+roleColor+';font-weight:600;padding:3px 9px;border-radius:10px;background:rgba(0,0,0,.06)">'+roleLabel+'</div>'
+        +'</div>';
+    }).join('');
+
+    el.innerHTML = html;
+  } catch(e){console.error(e);}
+}
+
+async function approveWholesale(uid) {
+  if (!sb) return;
+  try {
+    await sb.from('user_profiles').update({role:'wholesale'}).eq('id', uid);
+    showToast('Wholesale approved! ✅');
+    showAdminUsers(); // Refresh list
+  } catch(e) { showToast('Error approving account'); }
 }
 
 // ── Popular Manager ───────────────────────────────────────────────
@@ -1951,7 +2357,7 @@ function goTab(tab){
   setTimeout(()=>{
     pageEl.classList.add('active');
     if(tab==='settings') renderSettings();
-    if(tab==='orders'&&currentUser) loadOrders();
+    if(tab==='orders') renderOrdersPage();
   },160);
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
   const tabEl=document.getElementById('tab-'+tab); if(tabEl) tabEl.classList.add('active');
@@ -1990,11 +2396,17 @@ function safeParseJSON(str,fallback){try{return JSON.parse(str||'null')||fallbac
 // ── Lightbox ──────────────────────────────────────────────────────
 function openLightbox(sku) {
   const p = products.find(x => x.sku === sku);
-  if (!p || !p.image_url) return;
-  const {price, isWhl} = getPrice(p, 0);
-  document.getElementById('lbImg').src = p.image_url;
-  document.getElementById('lbName').textContent = p.name_english || p.name_korean || '';
-  document.getElementById('lbSku').textContent = p.sku + (p.name_korean && p.name_english ? ' · ' + p.name_korean : '');
+  // Fallback: get image from DOM if p.image_url somehow missing
+  let imgUrl = p && p.image_url ? p.image_url : null;
+  if (!imgUrl) {
+    const card = document.querySelector('[data-sku="'+sku+'"] img');
+    if (card && card.src) imgUrl = card.src;
+  }
+  if (!imgUrl) return;
+  const {price, isWhl} = p ? getPrice(p, 0) : {price:null,isWhl:false};
+  document.getElementById('lbImg').src = imgUrl;
+  document.getElementById('lbName').textContent = p ? (p.name_english || p.name_korean || '') : sku;
+  document.getElementById('lbSku').textContent = p ? (p.sku + (p.name_korean && p.name_english ? ' · ' + p.name_korean : '')) : sku;
   document.getElementById('lbPrice').textContent = price ? '$' + parseFloat(price).toFixed(2) + (isWhl ? ' (WHL)' : '') : '';
   document.getElementById('lightbox').classList.add('open');
   document.body.style.overflow = 'hidden';
