@@ -325,6 +325,24 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
 .sub-premium .sub-card-name,.sub-premium .sub-card-amt{color:#CE93D8;}
 .sub-premium .sub-cta{background:linear-gradient(135deg,#9C27B0,#6A1B9A);color:#fff;}
 
+/* Lightbox */
+#lightbox{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+#lightbox.open{display:flex;animation:lb-in .22s ease;}
+@keyframes lb-in{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+#lightbox img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.6);}
+.lb-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;}
+.lb-close svg{width:18px;height:18px;stroke:#fff;stroke-width:2.5;fill:none;stroke-linecap:round;}
+.lb-info{margin-top:14px;text-align:center;}
+.lb-name{font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;}
+.lb-sku{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:.5px;}
+.lb-price{font-size:19px;font-weight:700;color:var(--gold);font-family:'Cormorant Garamond',serif;margin-top:6px;}
+/* Price Editor */
+.price-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--tg-sep);}
+.price-row:last-child{border-bottom:none;}
+.price-inp{width:72px;padding:5px 7px;border-radius:8px;border:1px solid var(--tg-sep);background:var(--tg-surface);color:var(--tg-text);font-size:12px;text-align:right;}
+.price-inp:focus{border-color:var(--tg-blue);outline:none;}
+.price-save-btn{padding:5px 12px;border-radius:8px;background:var(--tg-blue);color:#fff;font-size:11px;font-weight:600;border:none;cursor:pointer;flex-shrink:0;}
+.price-saved{background:rgba(76,175,80,.15);border-color:#4CAF50 !important;}
 /* Upload */
 .upload-drop{border:2px dashed var(--tg-sep);border-radius:var(--radius);padding:28px 20px;text-align:center;transition:all .2s;cursor:pointer;}
 .upload-drop.drag-over{border-color:var(--tg-blue);background:var(--tg-blue-dim);}
@@ -523,6 +541,16 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
   <div class="sheet-body" id="sheetBody"></div>
 </div>
 
+<div id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <img id="lbImg" src="" alt="">
+  <div class="lb-info">
+    <div class="lb-name" id="lbName"></div>
+    <div class="lb-sku" id="lbSku"></div>
+    <div class="lb-price" id="lbPrice"></div>
+  </div>
+</div>
+
 <div id="toast">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
   <span id="toastMsg"></span>
@@ -693,10 +721,12 @@ async function saveStock(sku) {
 }
 
 async function showMigrateTool(){
-  openSheet('Migrate Images','<div style="padding:0 0 28px"><div style="font-size:12px;color:var(--tg-text2);line-height:1.7;margin-bottom:16px">Copy all product images from Japan storage to Singapore storage.<br><br>This may take a few minutes depending on number of images.</div><div id="migrateStatus"></div><div id="migrateLog" style="max-height:250px;overflow-y:auto;margin-top:10px"></div><button class="btn btn-primary" id="migrateBtn" onclick="runMigration()" style="margin-top:14px">Start Migration</button></div>');
+  openSheet('Migrate Images','<div style="padding:0 0 28px"><div style="font-size:12px;color:var(--tg-text2);line-height:1.7;margin-bottom:16px">Copy all product images from Japan (old) storage to Singapore (new) storage.<br><br>This may take a few minutes depending on number of images.</div><div class="form-group"><label class="form-label">Old Project API Key (Japan)</label><input class="form-input" id="oldKeyInput" placeholder="Paste old Supabase anon key here..."></div><div id="migrateStatus"></div><div id="migrateLog" style="max-height:250px;overflow-y:auto;margin-top:10px"></div><button class="btn btn-primary" id="migrateBtn" onclick="runMigration()" style="margin-top:14px">Start Migration</button></div>');
 }
 
 async function runMigration(){
+  const OLD_KEY = document.getElementById('oldKeyInput')?.value.trim();
+  if (!OLD_KEY) { showToast('Please enter the old project API key'); return; }
   const btn=document.getElementById('migrateBtn');
   const statusEl=document.getElementById('migrateStatus');
   const logEl=document.getElementById('migrateLog');
@@ -854,6 +884,7 @@ function prodCardHTML(p, badge) {
   const inCart = cart.find(c=>c.sku===p.sku);
   const qty = inCart ? inCart.qty : 0;
   const {price,isWhl,retail,moqNote,whlPrice} = getPrice(p, qty);
+  const imgClick = p.image_url ? ' onclick="openLightbox(\''+p.sku+'\')" style="cursor:zoom-in"' : '';
   const imgH = p.image_url ? '<img src="'+p.image_url+'" loading="lazy" onerror="errImg(this)">' : ph();
   const badgeH = badge ? '<div class="prod-badge badge-'+(badge==='HOT'?'hot':'new')+'">'+badge+'</div>' : '';
   const whlH = isWhl ? '<div style="position:absolute;top:6px;right:6px;background:var(--tg-blue);color:#fff;font-size:7px;font-weight:700;padding:2px 5px;border-radius:6px">WHL</div>' : '';
@@ -877,14 +908,14 @@ function prodCardHTML(p, badge) {
   }
   const stockH = stockBadgeHTML(p);
   const actH = outOfStock ? '<span style="font-size:9px;color:#f44336;font-weight:600">Sold Out</span>' : (qty > 0 ? stepperHTML(p.sku,qty) : addBtnHTML(p.sku));
-  return '<div class="prod-card" data-sku="'+p.sku+'"'+(outOfStock?' style="opacity:.6"':'')+'><div class="prod-img-wrap">'+badgeH+whlH+imgH+'</div><div class="prod-info">'+stockH+'<div class="prod-name">'+(p.name_english||p.name_korean||'Unknown')+'</div>'+(p.name_korean&&p.name_english?'<div class="prod-name-kr">'+p.name_korean+'</div>':'')+'<div class="prod-sku">'+skuLine+'</div><div class="prod-price-row"><div>'+priceH+'</div>'+actH+'</div></div></div>';
+  return '<div class="prod-card" data-sku="'+p.sku+'"'+(outOfStock?' style="opacity:.6"':'')+'><div class="prod-img-wrap"'+imgClick+'>'+badgeH+whlH+imgH+'</div><div class="prod-info">'+stockH+'<div class="prod-name">'+(p.name_english||p.name_korean||'Unknown')+'</div>'+(p.name_korean&&p.name_english?'<div class="prod-name-kr">'+p.name_korean+'</div>':'')+'<div class="prod-sku">'+skuLine+'</div><div class="prod-price-row"><div>'+priceH+'</div>'+actH+'</div></div></div>';
 }
 
 function prodListHTML(p) {
   const inCart = cart.find(c=>c.sku===p.sku);
   const qty = inCart ? inCart.qty : 0;
   const {price,isWhl,retail,moqNote,whlPrice} = getPrice(p, qty);
-  const imgH = p.image_url ? '<img class="prod-list-img" src="'+p.image_url+'" loading="lazy" onerror="this.style.display=\'none\'">' : '<div class="prod-list-img" style="display:flex;align-items:center;justify-content:center">'+ph()+'</div>';
+  const imgH = p.image_url ? '<img class="prod-list-img" src="'+p.image_url+'" loading="lazy" onclick="openLightbox(\''+p.sku+'\')" style="cursor:zoom-in" onerror="this.style.display=\'none\'">' : '<div class="prod-list-img" style="display:flex;align-items:center;justify-content:center">'+ph()+'</div>';
   const boxInfo = p.qty_per_box ? p.qty_per_box+'/box' : '';
   const skuLine = p.sku + (boxInfo?' · '+boxInfo:'') + ' · ' + p.category;
   let priceH = '';
@@ -1241,6 +1272,8 @@ function renderSettings() {
     html += row('#FF9800',starSvg,'Popular Products','Manage Top Picks & New Arrivals','','goPopularManager()');
     const invSvg='<path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>';
     html += row('#9C27B0',invSvg,'Inventory','Stock levels & alerts','','showInventory()');
+    const priceSvg='<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>';
+    html += row('#E91E63',priceSvg,'Price Manager','Edit retail & wholesale prices','','showPriceManager()');
     if(isSuperAdmin) html += row('#9C27B0',custSvg,'Customer Accounts','Retail, wholesale & subscriptions','','showAdminUsers()');
     if(isSuperAdmin) html += row('#00BCD4',upSvg,'Bulk Image Upload','Upload product images by SKU','','showBulkUpload()');
     if(isSuperAdmin) html += row('#E91E63',upSvg,'Migrate Images','Copy Japan → Singapore storage','','showMigrateTool()');
@@ -1578,7 +1611,7 @@ function setPopType(t){
 
 function filterPopCat(cat,el){
   _popCatF=cat;
-  document.querySelectorAll('[onclick^="filterPopCat"]').forEach(b=>{b.style.background='var(--tg-surface2)';b.style.color='var(--tg-text2)';b.style.borderColor='var(--tg-sep)';});
+  document.querySelectorAll('#catBtnWrap [data-cat]').forEach(b=>{b.style.background='var(--tg-surface2)';b.style.color='var(--tg-text2)';b.style.borderColor='var(--tg-sep)';});
   if(el){el.style.background='var(--tg-blue-dim)';el.style.color='var(--tg-blue)';el.style.borderColor='var(--tg-blue)';}
   refreshPopGrid(document.getElementById('popSrch')?.value||'');
 }
@@ -1945,6 +1978,122 @@ function addToHistory(sku){const h=getHistory();localStorage.setItem('syl_hist',
 
 // ── Helpers ───────────────────────────────────────────────────────
 function safeParseJSON(str,fallback){try{return JSON.parse(str||'null')||fallback;}catch{return fallback;}}
+
+// ── Lightbox ──────────────────────────────────────────────────────
+function openLightbox(sku) {
+  const p = products.find(x => x.sku === sku);
+  if (!p || !p.image_url) return;
+  const {price, isWhl} = getPrice(p, 0);
+  document.getElementById('lbImg').src = p.image_url;
+  document.getElementById('lbName').textContent = p.name_english || p.name_korean || '';
+  document.getElementById('lbSku').textContent = p.sku + (p.name_korean && p.name_english ? ' · ' + p.name_korean : '');
+  document.getElementById('lbPrice').textContent = price ? '$' + parseFloat(price).toFixed(2) + (isWhl ? ' (WHL)' : '') : '';
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ── Price Manager ─────────────────────────────────────────────────
+async function showPriceManager() {
+  const CAT_ORDER = ['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
+  const cats = ['All', ...CAT_ORDER.filter(c => products.some(p => p.category === c))];
+  const catPills = cats.map(c =>
+    '<button data-pcat="'+c+'" onclick="filterPriceCat(\''+c+'\',this)" style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid '+(c==='All'?'var(--tg-blue)':'var(--tg-sep)')+';background:'+(c==='All'?'var(--tg-blue-dim)':'var(--tg-surface2)')+';color:'+(c==='All'?'var(--tg-blue)':'var(--tg-text2)')+';font-size:11px;font-family:var(--font);cursor:pointer;white-space:nowrap">'+c+'</button>'
+  ).join('');
+  openSheet('Price Manager',
+    '<div style="padding:0 0 28px">'+
+    '<div style="font-size:11px;color:var(--tg-text2);margin-bottom:10px;line-height:1.6">Edit retail & wholesale prices. Changes save directly to Supabase.</div>'+
+    '<input id="priceSearch" placeholder="Search name or SKU..." oninput="renderPriceList()" style="width:100%;padding:9px 14px;border:1px solid var(--tg-input-border);border-radius:10px;font-size:12px;margin-bottom:8px;outline:none;font-family:var(--font);color:var(--tg-text);background:var(--tg-input)">'+
+    '<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch" id="priceCatWrap">'+catPills+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 72px 72px 56px;gap:4px;padding:4px 0 6px;border-bottom:1px solid var(--tg-sep);margin-bottom:4px">'+
+      '<div style="font-size:9.5px;color:var(--tg-text2);text-transform:uppercase;letter-spacing:.5px">Product</div>'+
+      '<div style="font-size:9.5px;color:var(--tg-text2);text-transform:uppercase;letter-spacing:.5px;text-align:right">Retail</div>'+
+      '<div style="font-size:9.5px;color:var(--tg-text2);text-transform:uppercase;letter-spacing:.5px;text-align:right">WHL</div>'+
+      '<div></div>'+
+    '</div>'+
+    '<div id="priceList"></div>'+
+    '</div>'
+  );
+  renderPriceList();
+}
+
+let _priceCatFilter = 'All';
+function filterPriceCat(cat, el) {
+  _priceCatFilter = cat;
+  document.querySelectorAll('[data-pcat]').forEach(b => {
+    b.style.borderColor = 'var(--tg-sep)';
+    b.style.background = 'var(--tg-surface2)';
+    b.style.color = 'var(--tg-text2)';
+  });
+  el.style.borderColor = 'var(--tg-blue)';
+  el.style.background = 'var(--tg-blue-dim)';
+  el.style.color = 'var(--tg-blue)';
+  renderPriceList();
+}
+
+function renderPriceList() {
+  const CAT_ORDER = ['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
+  const q = (document.getElementById('priceSearch')?.value || '').toLowerCase();
+  let list = products.filter(p => p.name_english || p.name_korean).sort((a,b) => {
+    const ai = CAT_ORDER.indexOf(a.category), bi = CAT_ORDER.indexOf(b.category);
+    if (ai !== bi) return (ai===-1?99:ai) - (bi===-1?99:bi);
+    return (a.sku||'').localeCompare(b.sku||'');
+  });
+  if (_priceCatFilter !== 'All') list = list.filter(p => p.category === _priceCatFilter);
+  if (q) list = list.filter(p =>
+    (p.name_english||'').toLowerCase().includes(q) ||
+    (p.name_korean||'').toLowerCase().includes(q) ||
+    (p.sku||'').toLowerCase().includes(q)
+  );
+  const el = document.getElementById('priceList');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tg-text2);font-size:12px">No products found</div>'; return; }
+  el.innerHTML = list.slice(0, 80).map(p => {
+    const retail = p.retail_price_unit ? parseFloat(p.retail_price_unit).toFixed(2) : '';
+    const whl = p.wholesale_price_unit ? parseFloat(p.wholesale_price_unit).toFixed(2) : '';
+    const img = p.image_url ? '<img src="'+p.image_url+'" style="width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0">' : '<div style="width:30px;height:30px;border-radius:6px;background:var(--tg-sep);flex-shrink:0"></div>';
+    return '<div class="price-row" id="pr_'+p.sku+'">'+
+      '<div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">'+img+
+        '<div style="min-width:0"><div style="font-size:11.5px;color:var(--tg-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.name_english||p.name_korean)+'</div>'+
+        '<div style="font-size:9.5px;color:var(--tg-text2)">'+p.sku+'</div></div>'+
+      '</div>'+
+      '<input class="price-inp" id="pr_r_'+p.sku+'" type="number" min="0" step="0.01" value="'+retail+'" placeholder="—" title="Retail price">'+
+      '<input class="price-inp" id="pr_w_'+p.sku+'" type="number" min="0" step="0.01" value="'+whl+'" placeholder="—" title="Wholesale price">'+
+      '<button class="price-save-btn" onclick="savePrice(\''+p.sku+'\')">Save</button>'+
+    '</div>';
+  }).join('');
+}
+
+async function savePrice(sku) {
+  const rInput = document.getElementById('pr_r_'+sku);
+  const wInput = document.getElementById('pr_w_'+sku);
+  const btn = document.querySelector('#pr_'+sku+' .price-save-btn');
+  const retail = rInput?.value ? parseFloat(rInput.value) : null;
+  const whl = wInput?.value ? parseFloat(wInput.value) : null;
+  if (retail !== null && retail < 0) { showToast('Invalid retail price'); return; }
+  if (whl !== null && whl < 0) { showToast('Invalid wholesale price'); return; }
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+  try {
+    const update = { updated_at: new Date().toISOString() };
+    if (retail !== null) update.retail_price_unit = retail;
+    if (whl !== null) update.wholesale_price_unit = whl;
+    if (sb) await sb.from('products').update(update).eq('sku', sku);
+    const p = products.find(x => x.sku === sku);
+    if (p) { if (retail !== null) p.retail_price_unit = retail; if (whl !== null) p.wholesale_price_unit = whl; }
+    if (btn) { btn.textContent = '✓'; btn.style.background = '#4CAF50'; }
+    const row = document.getElementById('pr_'+sku);
+    if (row) { row.style.background = 'rgba(76,175,80,.06)'; setTimeout(()=>{ if(row) row.style.background=''; },2000); }
+    setTimeout(() => { if(btn){btn.textContent='Save';btn.style.background='var(--tg-blue)';btn.disabled=false;} }, 2000);
+    refreshCards();
+  } catch(e) {
+    showToast('Save failed: ' + (e.message||''));
+    if (btn) { btn.textContent = 'Save'; btn.disabled = false; }
+  }
+}
 
 window.addEventListener('DOMContentLoaded',init);
 
