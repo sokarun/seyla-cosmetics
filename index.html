@@ -160,11 +160,12 @@ input,select,textarea{font-family:var(--font);}
 .stock-ok{background:rgba(76,175,80,.15);color:#4CAF50;}
 .stock-low{background:rgba(255,152,0,.15);color:#FF9800;}
 .stock-out{background:rgba(244,67,54,.15);color:#f44336;}
-.inv-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--tg-sep);}
+.inv-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--tg-sep);}
 .inv-row:last-child{border-bottom:none;}
 .inv-sku{font-size:10px;color:var(--tg-text2);margin-top:2px;}
-.inv-qty-input{width:70px;padding:5px 8px;border-radius:8px;border:1px solid var(--tg-sep);background:var(--tg-surface);color:var(--tg-text);font-size:12px;text-align:center;}
-.inv-save-btn{padding:5px 12px;border-radius:8px;background:var(--tg-blue);color:#fff;font-size:11px;font-weight:600;border:none;cursor:pointer;}
+.inv-qty-input{width:64px;padding:5px 8px;border-radius:8px;border:1px solid var(--tg-sep);background:var(--tg-surface);color:var(--tg-text);font-size:12px;text-align:right;outline:none;}
+.inv-qty-input:focus{border-color:var(--tg-blue);}
+.inv-save-btn{padding:5px 12px;border-radius:8px;background:var(--tg-blue);color:#fff;font-size:11px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;}
 
 /* Product list */
 .prod-list{padding:0 14px 8px;}
@@ -650,66 +651,131 @@ function applySettings() {
 }
 
 // ── Inventory ────────────────────────────────────────────────────────
+const INV_CAT_ORDER = ['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
+
 async function showInventory() {
-  const CAT_ORDER=['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
-  const body=`<div style="padding:0 0 28px">
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <button onclick="invFilter('all',this)" class="inv-filter-btn inv-filter-active" style="font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--tg-blue);background:var(--tg-blue);color:#fff;cursor:pointer">All</button>
-      <button onclick="invFilter('low',this)" class="inv-filter-btn" style="font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid #FF9800;background:transparent;color:#FF9800;cursor:pointer">Low Stock</button>
-      <button onclick="invFilter('out',this)" class="inv-filter-btn" style="font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid #f44336;background:transparent;color:#f44336;cursor:pointer">Out of Stock</button>
-    </div>
+  const cats = INV_CAT_ORDER.filter(c => products.some(p => p.category === c));
+
+  // Build filter pill row: All | Low Stock | Out of Stock | [categories...]
+  const pills = [
+    {key:'all',   label:'All',           color:'var(--tg-blue)',  active:true},
+    {key:'low',   label:'🟡 Low Stock',  color:'#FF9800',         active:false},
+    {key:'out',   label:'🔴 Out of Stock',color:'#f44336',        active:false},
+    ...cats.map(c=>({key:'cat:'+c, label:c, color:'var(--tg-text2)', active:false}))
+  ];
+
+  const pillsHTML = pills.map(p =>
+    '<button data-inv-filter="'+p.key+'" onclick="invFilter(\''+p.key+'\',this)" style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid '+(p.active?p.color:'var(--tg-sep)')+';background:'+(p.active?'rgba(42,171,238,.12)':'var(--tg-surface2)')+';color:'+(p.active?p.color:'var(--tg-text2)')+';font-size:11px;font-family:var(--font);cursor:pointer;white-space:nowrap">'+p.label+'</button>'
+  ).join('');
+
+  const body = `<div style="padding:0 0 28px">
+    <div style="font-size:11px;color:var(--tg-text2);margin-bottom:10px;line-height:1.6">Tap image to preview. SKU with no qty set → Out of Stock.</div>
+    <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch" id="invFilterRow">${pillsHTML}</div>
     <div id="invList"><div style="text-align:center;padding:20px;color:var(--tg-text2)">Loading...</div></div>
   </div>`;
-  openSheet('Inventory',body);
+
+  openSheet('Inventory', body);
+  invCurrentFilter = 'all';
   await renderInventoryList('all');
 }
 
-let invCurrentFilter='all';
+let invCurrentFilter = 'all';
+
 async function invFilter(f, el) {
-  invCurrentFilter=f;
-  document.querySelectorAll('.inv-filter-btn').forEach(b=>{
-    b.style.background='transparent';
-    b.style.color=b.style.borderColor;
+  invCurrentFilter = f;
+  document.querySelectorAll('[data-inv-filter]').forEach(b => {
+    b.style.borderColor = 'var(--tg-sep)';
+    b.style.background  = 'var(--tg-surface2)';
+    b.style.color       = 'var(--tg-text2)';
   });
-  el.style.background=el.style.borderColor;
-  el.style.color='#fff';
+  // Colour active pill
+  const colorMap = {
+    'all': 'var(--tg-blue)',
+    'low': '#FF9800',
+    'out': '#f44336',
+  };
+  const activeColor = colorMap[f] || 'var(--tg-blue)';
+  el.style.borderColor = activeColor;
+  el.style.background  = 'rgba(42,171,238,.12)';
+  el.style.color       = activeColor;
   await renderInventoryList(f);
 }
 
 async function renderInventoryList(filter) {
-  const listEl=document.getElementById('invList');
-  if(!listEl) return;
-  const CAT_ORDER=['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
-  let items=[...products].filter(p=>p.name_english||p.name_korean).sort((a,b)=>{
-    const ai=CAT_ORDER.indexOf(a.category),bi=CAT_ORDER.indexOf(b.category);
-    if(ai!==bi) return (ai===-1?99:ai)-(bi===-1?99:bi);
+  const listEl = document.getElementById('invList');
+  if (!listEl) return;
+
+  // Base sorted list
+  let items = [...products].filter(p => p.name_english || p.name_korean).sort((a,b) => {
+    const ai = INV_CAT_ORDER.indexOf(a.category), bi = INV_CAT_ORDER.indexOf(b.category);
+    if (ai !== bi) return (ai===-1?99:ai)-(bi===-1?99:bi);
     return (a.sku||'').localeCompare(b.sku||'');
   });
-  if(filter==='low') items=items.filter(p=>p.stock_qty!==null&&p.stock_qty!==undefined&&parseInt(p.stock_qty)>0&&parseInt(p.stock_qty)<=LOW_STOCK_THRESHOLD);
-  else if(filter==='out') items=items.filter(p=>p.stock_qty!==null&&p.stock_qty!==undefined&&parseInt(p.stock_qty)<=0);
-  if(!items.length){listEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--tg-text2);font-size:12px">No products found</div>';return;}
-  let lastCat='';
-  let html='';
-  items.forEach(p=>{
-    if(p.category!==lastCat){
-      html+='<div style="font-size:10px;font-weight:700;color:var(--tg-text2);text-transform:uppercase;letter-spacing:1px;padding:10px 0 4px">'+p.category+'</div>';
-      lastCat=p.category;
+
+  let title = '';
+  if (filter === 'low') {
+    // Low: qty is set AND 0 < qty <= threshold
+    items = items.filter(p => p.stock_qty !== null && p.stock_qty !== undefined && parseInt(p.stock_qty) > 0 && parseInt(p.stock_qty) <= LOW_STOCK_THRESHOLD);
+    title = '🟡 Low Stock';
+  } else if (filter === 'out') {
+    // Out: qty=0 OR qty not set (null/undefined)
+    items = items.filter(p => p.stock_qty === null || p.stock_qty === undefined || parseInt(p.stock_qty) <= 0);
+    title = '🔴 Out of Stock / Not Set';
+  } else if (filter.startsWith('cat:')) {
+    const cat = filter.replace('cat:', '');
+    items = items.filter(p => p.category === cat);
+    title = cat;
+  }
+
+  if (!items.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tg-text2);font-size:12px">No products found</div>';
+    return;
+  }
+
+  let html = '';
+  let lastCat = '';
+
+  items.forEach(p => {
+    // Category header — show for All, Low, Out, or cat filter
+    if (p.category !== lastCat) {
+      html += '<div style="font-size:9px;font-weight:700;color:var(--tg-text2);text-transform:uppercase;letter-spacing:1.5px;padding:'+(lastCat?'14px':'4px')+' 0 5px">' + p.category + '</div>';
+      lastCat = p.category;
     }
-    const qty=p.stock_qty!==null&&p.stock_qty!==undefined?parseInt(p.stock_qty):null;
-    const badge=qty===null?'':(qty<=0?'<span class="stock-badge stock-out">Out</span>':qty<=LOW_STOCK_THRESHOLD?'<span class="stock-badge stock-low">Low</span>':'<span class="stock-badge stock-ok">OK</span>');
-    html+=`<div class="inv-row">
+
+    const qty = (p.stock_qty !== null && p.stock_qty !== undefined) ? parseInt(p.stock_qty) : null;
+    const isNotSet = qty === null;
+
+    let badgeHtml = '';
+    if (isNotSet) {
+      badgeHtml = '<span style="font-size:9px;background:rgba(156,39,176,.15);color:#9C27B0;padding:2px 7px;border-radius:10px;font-weight:600">Not Set</span>';
+    } else if (qty <= 0) {
+      badgeHtml = '<span class="stock-badge stock-out">Out</span>';
+    } else if (qty <= LOW_STOCK_THRESHOLD) {
+      badgeHtml = '<span class="stock-badge stock-low">Low</span>';
+    } else {
+      badgeHtml = '<span class="stock-badge stock-ok">OK</span>';
+    }
+
+    // Clickable image → lightbox
+    const imgEl = p.image_url
+      ? '<img src="'+p.image_url+'" onclick="openLightbox(\''+p.sku+'\')" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0)" title="Preview">'
+      : '<div onclick="showToast(\'No image for this SKU\')" style="width:44px;height:44px;border-radius:8px;background:var(--tg-surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg viewBox="0 0 24 24" fill="none" stroke="var(--tg-text2)" stroke-width="1.5" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+
+    html += `<div class="inv-row" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--tg-sep)">
+      ${imgEl}
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name_english||p.name_korean}</div>
-        <div class="inv-sku">${p.sku}${p.qty_per_box?' · '+p.qty_per_box+'/box':''}</div>
-        ${badge}
+        <div style="font-size:12px;font-weight:500;color:var(--tg-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name_english||p.name_korean}</div>
+        <div style="font-size:10px;color:var(--tg-text2);margin-top:1px">${p.sku}${p.qty_per_box?' · '+p.qty_per_box+'/box':''}</div>
+        <div style="margin-top:4px">${badgeHtml}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        <input class="inv-qty-input" type="number" min="0" id="invq_${p.sku}" value="${qty!==null?qty:''}" placeholder="—">
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+        <input class="inv-qty-input" type="number" min="0" id="invq_${p.sku}" value="${qty!==null?qty:''}" placeholder="—" style="width:64px;text-align:right">
         <button class="inv-save-btn" onclick="saveStock('${p.sku}')">Save</button>
       </div>
     </div>`;
   });
-  listEl.innerHTML=html;
+
+  listEl.innerHTML = html;
 }
 
 async function saveStock(sku) {
@@ -2426,10 +2492,11 @@ async function showPriceManager() {
   ).join('');
   openSheet('Price Manager',
     '<div style="padding:0 0 28px">'+
-    '<div style="font-size:11px;color:var(--tg-text2);margin-bottom:10px;line-height:1.6">Edit retail & wholesale prices. Changes save directly to Supabase.</div>'+
+    '<div style="font-size:11px;color:var(--tg-text2);margin-bottom:10px;line-height:1.6">Edit retail & wholesale prices. Tap image to preview. Changes save directly to Supabase.</div>'+
     '<input id="priceSearch" placeholder="Search name or SKU..." oninput="renderPriceList()" style="width:100%;padding:9px 14px;border:1px solid var(--tg-input-border);border-radius:10px;font-size:12px;margin-bottom:8px;outline:none;font-family:var(--font);color:var(--tg-text);background:var(--tg-input)">'+
     '<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch" id="priceCatWrap">'+catPills+'</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 72px 72px 56px;gap:4px;padding:4px 0 6px;border-bottom:1px solid var(--tg-sep);margin-bottom:4px">'+
+    '<div style="display:grid;grid-template-columns:44px 1fr 68px 68px 52px;gap:4px;padding:4px 0 6px;border-bottom:1px solid var(--tg-sep);margin-bottom:4px">'+
+      '<div></div>'+
       '<div style="font-size:9.5px;color:var(--tg-text2);text-transform:uppercase;letter-spacing:.5px">Product</div>'+
       '<div style="font-size:9.5px;color:var(--tg-text2);text-transform:uppercase;letter-spacing:.5px;text-align:right">Retail</div>'+
       '<div style="font-size:9.5px;color:var(--tg-text2);text-transform:uppercase;letter-spacing:.5px;text-align:right">WHL</div>'+
@@ -2472,20 +2539,31 @@ function renderPriceList() {
   const el = document.getElementById('priceList');
   if (!el) return;
   if (!list.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--tg-text2);font-size:12px">No products found</div>'; return; }
-  el.innerHTML = list.slice(0, 80).map(p => {
+
+  let html = '';
+  let lastCat = '';
+  list.slice(0, 120).forEach(p => {
+    // Category header (only when showing All or filtered)
+    if (_priceCatFilter === 'All' && p.category !== lastCat) {
+      html += '<div style="font-size:9px;font-weight:700;color:var(--tg-text2);text-transform:uppercase;letter-spacing:1.5px;padding:10px 0 5px;margin-top:'+(lastCat?'6px':'0')+'">' + p.category + '</div>';
+      lastCat = p.category;
+    }
     const retail = p.retail_price_unit ? parseFloat(p.retail_price_unit).toFixed(2) : '';
-    const whl = p.wholesale_price_unit ? parseFloat(p.wholesale_price_unit).toFixed(2) : '';
-    const img = p.image_url ? '<img src="'+p.image_url+'" style="width:30px;height:30px;border-radius:6px;object-fit:cover;flex-shrink:0">' : '<div style="width:30px;height:30px;border-radius:6px;background:var(--tg-sep);flex-shrink:0"></div>';
-    return '<div class="price-row" id="pr_'+p.sku+'">'+
-      '<div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">'+img+
-        '<div style="min-width:0"><div style="font-size:11.5px;color:var(--tg-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.name_english||p.name_korean)+'</div>'+
-        '<div style="font-size:9.5px;color:var(--tg-text2)">'+p.sku+'</div></div>'+
-      '</div>'+
+    const whl    = p.wholesale_price_unit ? parseFloat(p.wholesale_price_unit).toFixed(2) : '';
+    // Clickable image → lightbox
+    const imgEl = p.image_url
+      ? '<img src="'+p.image_url+'" onclick="openLightbox(\''+p.sku+'\')" style="width:38px;height:38px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0)" title="Preview image">'
+      : '<div style="width:38px;height:38px;border-radius:8px;background:var(--tg-sep);flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="var(--tg-text2)" stroke-width="1.5" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+    html += '<div class="price-row" id="pr_'+p.sku+'">'+
+      imgEl+
+      '<div style="flex:1;min-width:0;margin-left:7px"><div style="font-size:11.5px;color:var(--tg-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.name_english||p.name_korean)+'</div>'+
+        '<div style="font-size:9.5px;color:var(--tg-text2)">'+p.sku+(p.qty_per_box?' · '+p.qty_per_box+'/box':'')+'</div></div>'+
       '<input class="price-inp" id="pr_r_'+p.sku+'" type="number" min="0" step="0.01" value="'+retail+'" placeholder="—" title="Retail price">'+
       '<input class="price-inp" id="pr_w_'+p.sku+'" type="number" min="0" step="0.01" value="'+whl+'" placeholder="—" title="Wholesale price">'+
       '<button class="price-save-btn" onclick="savePrice(\''+p.sku+'\')">Save</button>'+
     '</div>';
-  }).join('');
+  });
+  el.innerHTML = html;
 }
 
 async function savePrice(sku) {
