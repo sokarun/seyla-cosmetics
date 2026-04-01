@@ -640,6 +640,9 @@ async function loadSiteSettings() {
       siteSettings = { ...siteSettings, ...p };
     }
   } catch(e) {}
+  // Always force grid2 layout
+  siteSettings.product_layout = siteSettings.product_layout || 'grid2';
+  if (siteSettings.product_layout === 'list') siteSettings.product_layout = 'grid2';
   applySettings();
 }
 
