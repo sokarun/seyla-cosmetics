@@ -1617,8 +1617,8 @@ function showLogin() {
     </div>
 
     <div class="form-group">
-      <label class="form-label">Telegram Username <span style="font-size:10px;color:var(--tg-text2)">(optional)</span></label>
-      <input class="form-input" id="rTelegram" placeholder="e.g. @yourusername"
+      <label class="form-label">Telegram No *</label>
+      <input class="form-input" id="rTelegram" placeholder="e.g. 085xxxxxxx or @yourusername"
         onkeydown="if(event.key==='Enter')document.getElementById('rAddress').focus()">
     </div>
 
@@ -1717,8 +1717,8 @@ function showStaffLogin() {
 
 function checkStaffPw() {
   const pw=document.getElementById('staffPwInput').value;
-  if(pw===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Sok Arun',email:'admin@seylacosmetics.com'});}
-  else if(pw===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',email:'admin2@seylacosmetics.com'});}
+  if(pw===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Super Admin',phone:'087280007',email:'087280007@seylacosmetics.com'});}
+  else if(pw===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',phone:'096259096',email:'096259096@seylacosmetics.com'});}
   else if(pw===STAFF_PW){closeModal();loginAs({role:'staff',full_name:'Staff',email:'staff@seylacosmetics.com'});}
   else showToast('Incorrect password');
 }
@@ -1727,8 +1727,8 @@ async function doLogin() {
   const email=document.getElementById('loginEmail')?.value.trim();
   const pass=document.getElementById('loginPw')?.value;
   if(!email||!pass){showToast('Please fill in all fields');return;}
-  if(pass===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Sok Arun',email});return;}
-  if(pass===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',email});return;}
+  if(pass===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Super Admin',phone:'087280007',email});return;}
+  if(pass===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',phone:'096259096',email});return;}
   if(pass===STAFF_PW){closeModal();loginAs({role:'staff',full_name:'Staff',email});return;}
   try {
     const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
@@ -1757,6 +1757,7 @@ async function doRegister() {
   // ── Validation ──────────────────────────────────────────────
   if (!name)  { showToast('Please enter your full name'); return; }
   if (!phone) { showToast('Please enter your phone number'); return; }
+  if (!telegram) { showToast('Please enter your Telegram No'); return; }
 
   const phoneRegex = /^(\+855\s?|0)(1[0-9]|[6-9][0-9])\s?[\d]{3}\s?[\d]{3,4}$/;
   if (!phoneRegex.test(phone.replace(/[-\s]/g,''))) {
