@@ -632,6 +632,18 @@ async function init() {
     } catch(e) { sessionStorage.removeItem('syl_admin'); }
   }
   updateAuthUI();
+  // Restore last active tab (skip for sign-out which clears syl_tab)
+  const savedTab = sessionStorage.getItem('syl_tab');
+  const isAdmin = ['admin','super_admin','staff'].includes(currentRole);
+  // Admin can't go to orders tab (no purchase history)
+  if (savedTab && savedTab !== 'shop') {
+    if (isAdmin && savedTab === 'orders') {
+      // Admin: redirect to settings instead
+      setTimeout(() => goTab('settings'), 100);
+    } else {
+      setTimeout(() => goTab(savedTab), 100);
+    }
+  }
   setTimeout(() => document.getElementById('ls').classList.add('hide'), 1600);
 }
 
@@ -659,93 +671,150 @@ function applySettings() {
 
 // ── Inventory ────────────────────────────────────────────────────────
 const INV_CAT_ORDER = ['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
+let invMainTab = 'all';
+let invSubCat  = 'all';
 
 async function showInventory() {
-  const cats = INV_CAT_ORDER.filter(c => products.some(p => p.category === c));
-
-  // Build filter pill row: All | Low Stock | Out of Stock | [categories...]
-  const pills = [
-    {key:'all',   label:'All',           color:'var(--tg-blue)',  active:true},
-    {key:'low',   label:'🟡 Low Stock',  color:'#FF9800',         active:false},
-    {key:'out',   label:'🔴 Out of Stock',color:'#f44336',        active:false},
-    ...cats.map(c=>({key:'cat:'+c, label:c, color:'var(--tg-text2)', active:false}))
-  ];
-
-  const pillsHTML = pills.map(p =>
-    '<button data-inv-filter="'+p.key+'" onclick="invFilter(\''+p.key+'\',this)" style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid '+(p.active?p.color:'var(--tg-sep)')+';background:'+(p.active?'rgba(42,171,238,.12)':'var(--tg-surface2)')+';color:'+(p.active?p.color:'var(--tg-text2)')+';font-size:11px;font-family:var(--font);cursor:pointer;white-space:nowrap">'+p.label+'</button>'
-  ).join('');
-
   const body = `<div style="padding:0 0 28px">
-    <div style="font-size:11px;color:var(--tg-text2);margin-bottom:10px;line-height:1.6">Tap image to preview. SKU with no qty set → Out of Stock.</div>
-    <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch" id="invFilterRow">${pillsHTML}</div>
-    <div id="invList"><div style="text-align:center;padding:20px;color:var(--tg-text2)">Loading...</div></div>
+    <div style="font-size:11px;color:var(--tg-text2);margin-bottom:12px;line-height:1.6">Tap image to preview. SKU with no qty set → Out of Stock.</div>
+
+    <!-- MAIN TABS: Low Stock / Out of Stock -->
+    <div style="display:flex;border-bottom:2px solid var(--tg-sep);margin-bottom:0" id="invMainTabRow">
+      <button class="inv-main-tab" onclick="setInvMainTab('low',this)" style="flex:1;padding:9px 0;font-size:12px;font-weight:600;color:#FF9800;background:none;border:none;border-bottom:2px solid #FF9800;margin-bottom:-2px;cursor:pointer;font-family:var(--font)">🟡 Low Stock</button>
+      <button class="inv-main-tab" onclick="setInvMainTab('out',this)" style="flex:1;padding:9px 0;font-size:12px;font-weight:500;color:var(--tg-text2);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;font-family:var(--font)">🔴 Out of Stock</button>
+    </div>
+
+    <!-- SUB CATEGORY TABS (hidden for All tab) -->
+    <div id="invSubCatWrap" style="display:none;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 0 6px;margin-bottom:4px;scrollbar-width:none">
+      <div id="invSubCatRow" style="display:flex;gap:5px;width:max-content"></div>
+    </div>
+
+    <!-- LIST -->
+    <div id="invList" style="margin-top:8px"><div style="text-align:center;padding:20px;color:var(--tg-text2)">Loading...</div></div>
   </div>`;
 
   openSheet('Inventory', body);
-  invCurrentFilter = 'all';
-  await renderInventoryList('all');
+  invMainTab = 'low';
+  invSubCat  = 'all';
+  buildSubCatTabs('low');
+  document.getElementById('invSubCatWrap').style.display = 'block';
+  await renderInventoryList();
 }
 
-let invCurrentFilter = 'all';
+async function setInvMainTab(tab, el) {
+  invMainTab = tab;
+  invSubCat  = 'all';
 
-async function invFilter(f, el) {
-  invCurrentFilter = f;
-  document.querySelectorAll('[data-inv-filter]').forEach(b => {
+  // Update main tab styles
+  document.querySelectorAll('.inv-main-tab').forEach(b => {
+    b.style.color = 'var(--tg-text2)';
+    b.style.fontWeight = '500';
+    b.style.borderBottom = '2px solid transparent';
+  });
+  const colors = {low:'#FF9800', out:'#f44336'};
+  el.style.color = colors[tab];
+  el.style.fontWeight = '600';
+  el.style.borderBottom = '2px solid ' + colors[tab];
+
+  // Always show sub-cat row
+  const subWrap = document.getElementById('invSubCatWrap');
+  subWrap.style.display = 'block';
+  buildSubCatTabs(tab);
+
+  await renderInventoryList();
+}
+
+function buildSubCatTabs(mainTab) {
+  // Filter products by main tab first, then get available categories
+  let filtered = products.filter(p => p.name_english || p.name_korean);
+  if (mainTab === 'low') {
+    filtered = filtered.filter(p => p.stock_qty !== null && p.stock_qty !== undefined && parseInt(p.stock_qty) > 0 && parseInt(p.stock_qty) <= LOW_STOCK_THRESHOLD);
+  } else if (mainTab === 'out') {
+    filtered = filtered.filter(p => p.stock_qty === null || p.stock_qty === undefined || parseInt(p.stock_qty) <= 0);
+  }
+
+  const availCats = INV_CAT_ORDER.filter(c => filtered.some(p => p.category === c));
+  const color = mainTab === 'low' ? '#FF9800' : '#f44336';
+
+  const tabs = ['all', ...availCats];
+  const row = document.getElementById('invSubCatRow');
+  if (!row) return;
+
+  row.innerHTML = tabs.map(cat => {
+    const isActive = cat === invSubCat;
+    const label = cat === 'all' ? 'All' : cat;
+    const count = cat === 'all' ? filtered.length : filtered.filter(p => p.category === cat).length;
+    return `<button data-inv-subcat="${cat}" onclick="setInvSubCat('${cat}',this,'${mainTab}')"
+      style="flex-shrink:0;padding:5px 12px;border-radius:16px;border:1.5px solid ${isActive?color:'var(--tg-sep)'};
+      background:${isActive?'rgba('+hexToRgb(mainTab)+', .12)':'var(--tg-surface2)'};
+      color:${isActive?color:'var(--tg-text2)'};font-size:11px;font-family:var(--font);cursor:pointer;white-space:nowrap">
+      ${label} <span style="font-size:10px;opacity:.7">(${count})</span>
+    </button>`;
+  }).join('');
+}
+
+function hexToRgb(mainTab) {
+  return mainTab === 'low' ? '255,152,0' : '244,67,54';
+}
+
+async function setInvSubCat(cat, el, mainTab) {
+  invSubCat = cat;
+  const color = mainTab === 'low' ? '#FF9800' : '#f44336';
+
+  document.querySelectorAll('[data-inv-subcat]').forEach(b => {
     b.style.borderColor = 'var(--tg-sep)';
     b.style.background  = 'var(--tg-surface2)';
     b.style.color       = 'var(--tg-text2)';
   });
-  // Colour active pill
-  const colorMap = {
-    'all': 'var(--tg-blue)',
-    'low': '#FF9800',
-    'out': '#f44336',
-  };
-  const activeColor = colorMap[f] || 'var(--tg-blue)';
-  el.style.borderColor = activeColor;
-  el.style.background  = 'rgba(42,171,238,.12)';
-  el.style.color       = activeColor;
-  await renderInventoryList(f);
+  el.style.borderColor = color;
+  el.style.background  = 'rgba('+hexToRgb(mainTab)+',.12)';
+  el.style.color       = color;
+
+  await renderInventoryList();
 }
 
-async function renderInventoryList(filter) {
+async function renderInventoryList() {
   const listEl = document.getElementById('invList');
   if (!listEl) return;
 
-  // Base sorted list
+  // Save scroll position
+  const sheet = document.getElementById('sheetBody');
+  const scrollTop = sheet ? sheet.scrollTop : 0;
+
   let items = [...products].filter(p => p.name_english || p.name_korean).sort((a,b) => {
     const ai = INV_CAT_ORDER.indexOf(a.category), bi = INV_CAT_ORDER.indexOf(b.category);
     if (ai !== bi) return (ai===-1?99:ai)-(bi===-1?99:bi);
     return (a.sku||'').localeCompare(b.sku||'');
   });
 
-  let title = '';
-  if (filter === 'low') {
-    // Low: qty is set AND 0 < qty <= threshold
+  // Apply main tab filter
+  if (invMainTab === 'low') {
     items = items.filter(p => p.stock_qty !== null && p.stock_qty !== undefined && parseInt(p.stock_qty) > 0 && parseInt(p.stock_qty) <= LOW_STOCK_THRESHOLD);
-    title = '🟡 Low Stock';
-  } else if (filter === 'out') {
-    // Out: qty=0 OR qty not set (null/undefined)
+  } else if (invMainTab === 'out') {
     items = items.filter(p => p.stock_qty === null || p.stock_qty === undefined || parseInt(p.stock_qty) <= 0);
-    title = '🔴 Out of Stock / Not Set';
-  } else if (filter.startsWith('cat:')) {
-    const cat = filter.replace('cat:', '');
-    items = items.filter(p => p.category === cat);
-    title = cat;
+  }
+
+  // Apply sub-category filter
+  if (invSubCat && invSubCat !== 'all') {
+    items = items.filter(p => p.category === invSubCat);
   }
 
   if (!items.length) {
-    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tg-text2);font-size:12px">No products found</div>';
+    const emptyMsg = invMainTab === 'low' ? '✅ No low stock items' : invMainTab === 'out' ? '✅ No out of stock items' : 'No products found';
+    listEl.innerHTML = '<div style="text-align:center;padding:32px;color:var(--tg-text2);font-size:12px">'+emptyMsg+'</div>';
     return;
   }
 
   let html = '';
   let lastCat = '';
+  const showCatHeader = invSubCat === 'all';
 
   items.forEach(p => {
-    // Category header — show for All, Low, Out, or cat filter
-    if (p.category !== lastCat) {
-      html += '<div style="font-size:9px;font-weight:700;color:var(--tg-text2);text-transform:uppercase;letter-spacing:1.5px;padding:'+(lastCat?'14px':'4px')+' 0 5px">' + p.category + '</div>';
+    if (showCatHeader && p.category !== lastCat) {
+      const catCount = items.filter(x => x.category === p.category).length;
+      html += `<div style="font-size:9px;font-weight:700;color:var(--tg-text2);text-transform:uppercase;letter-spacing:1.5px;padding:${lastCat?'14px':'4px'} 0 5px;display:flex;align-items:center;justify-content:space-between">
+        <span>${p.category}</span><span style="font-size:9px;background:var(--tg-surface2);padding:2px 7px;border-radius:8px;color:var(--tg-text2)">${catCount}</span>
+      </div>`;
       lastCat = p.category;
     }
 
@@ -758,17 +827,16 @@ async function renderInventoryList(filter) {
     } else if (qty <= 0) {
       badgeHtml = '<span class="stock-badge stock-out">Out</span>';
     } else if (qty <= LOW_STOCK_THRESHOLD) {
-      badgeHtml = '<span class="stock-badge stock-low">Low</span>';
+      badgeHtml = '<span class="stock-badge stock-low">Low: '+qty+'</span>';
     } else {
-      badgeHtml = '<span class="stock-badge stock-ok">OK</span>';
+      badgeHtml = '<span class="stock-badge stock-ok">OK: '+qty+'</span>';
     }
 
-    // Clickable image → lightbox
     const imgEl = p.image_url
-      ? '<img src="'+p.image_url+'" onclick="openLightbox(\''+p.sku+'\')" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0)" title="Preview">'
-      : '<div onclick="showToast(\'No image for this SKU\')" style="width:44px;height:44px;border-radius:8px;background:var(--tg-surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg viewBox="0 0 24 24" fill="none" stroke="var(--tg-text2)" stroke-width="1.5" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+      ? '<img src="'+p.image_url+'" onclick="openLightbox(\''+p.sku+'\')" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0)">'
+      : '<div style="width:44px;height:44px;border-radius:8px;background:var(--tg-surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="var(--tg-text2)" stroke-width="1.5" width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
 
-    html += `<div class="inv-row" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--tg-sep)">
+    html += `<div class="inv-row" id="invrow_${p.sku}">
       ${imgEl}
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:500;color:var(--tg-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name_english||p.name_korean}</div>
@@ -776,38 +844,64 @@ async function renderInventoryList(filter) {
         <div style="margin-top:4px">${badgeHtml}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-        <input class="inv-qty-input" type="number" min="0" id="invq_${p.sku}" value="${qty!==null?qty:''}" placeholder="—" style="width:64px;text-align:right">
+        <input class="inv-qty-input" type="number" min="0" id="invq_${p.sku}" value="${qty!==null?qty:''}" placeholder="—">
         <button class="inv-save-btn" onclick="saveStock('${p.sku}')">Save</button>
       </div>
     </div>`;
   });
 
   listEl.innerHTML = html;
+
+  // Restore scroll position after render
+  if (sheet && scrollTop > 0) {
+    requestAnimationFrame(() => { sheet.scrollTop = scrollTop; });
+  }
 }
 
 async function saveStock(sku) {
-  const input=document.getElementById('invq_'+sku);
-  if(!input) return;
-  const val=parseInt(input.value);
-  if(isNaN(val)||val<0){showToast('Invalid quantity');return;}
+  const input = document.getElementById('invq_'+sku);
+  if (!input) return;
+  const val = parseInt(input.value);
+  if (isNaN(val)||val<0) { showToast('Invalid quantity'); return; }
+
+  // Save scroll position BEFORE save
+  const sheet = document.getElementById('sheetBody');
+  const scrollTop = sheet ? sheet.scrollTop : 0;
+
+  const btn = input.closest('.inv-row')?.querySelector('.inv-save-btn');
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
   try {
-    if(sb) await sb.from('products').update({stock_qty:val}).eq('sku',sku);
-    const prod=products.find(p=>p.sku===sku);
-    if(prod){
-      prod.stock_qty=val;
-      // WhatsApp alert if low or out
-      if(val<=LOW_STOCK_THRESHOLD){
-        const label=val<=0?'🔴 OUT OF STOCK':'🟡 LOW STOCK';
-        const name=prod.name_english||prod.name_korean||sku;
-        const msg=encodeURIComponent(label+'\n'+name+' ('+sku+')\nStock: '+val+' units');
+    if (sb) await sb.from('products').update({stock_qty:val}).eq('sku',sku);
+    const prod = products.find(p=>p.sku===sku);
+    if (prod) {
+      prod.stock_qty = val;
+      if (val <= LOW_STOCK_THRESHOLD) {
+        const label = val<=0 ? '🔴 OUT OF STOCK' : '🟡 LOW STOCK';
+        const name = prod.name_english||prod.name_korean||sku;
+        const msg = encodeURIComponent(label+'\n'+name+' ('+sku+')\nStock: '+val+' units');
         new Image().src='https://api.callmebot.com/whatsapp.php?phone='+WA_NUMBER+'&text='+msg+'&apikey='+CMB_KEY;
       }
     }
+
     showToast('Stock updated ✓');
-    input.style.borderColor='#4CAF50';
-    setTimeout(()=>{if(input)input.style.borderColor='';},2000);
+    input.style.borderColor = '#4CAF50';
+    if (btn) { btn.textContent = '✓'; btn.style.background='#4CAF50'; }
+    setTimeout(() => {
+      if (input) input.style.borderColor = '';
+      if (btn) { btn.textContent='Save'; btn.style.background='var(--tg-blue)'; btn.disabled=false; }
+    }, 2000);
+
     refreshCards();
-  } catch(e){showToast('Save failed');}
+
+    // Rebuild sub-cat counts if needed, then restore scroll
+    if (invMainTab !== 'all') buildSubCatTabs(invMainTab);
+    requestAnimationFrame(() => { if (sheet) sheet.scrollTop = scrollTop; });
+
+  } catch(e) {
+    showToast('Save failed');
+    if (btn) { btn.textContent='Save'; btn.disabled=false; }
+  }
 }
 
 async function showMigrateTool(){
@@ -1573,8 +1667,8 @@ function showLogin() {
   <!-- SIGN IN FORM -->
   <div id="loginForm">
     <div class="form-group">
-      <label class="form-label">Phone Number</label>
-      <input class="form-input" id="loginEmail" type="tel" placeholder="0xx-xxx-xxx or your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('loginPw').focus()">
+      <label class="form-label">Phone No / Telegram No</label>
+      <input class="form-input" id="loginEmail" type="tel" placeholder="e.g. 085xxxxxxx or @yourusername" onkeydown="if(event.key==='Enter')document.getElementById('loginPw').focus()">
     </div>
     <div class="form-group">
       <label class="form-label">Password</label>
@@ -1724,18 +1818,23 @@ function checkStaffPw() {
 }
 
 async function doLogin() {
-  const email=document.getElementById('loginEmail')?.value.trim();
+  const phone=document.getElementById('loginEmail')?.value.trim();
   const pass=document.getElementById('loginPw')?.value;
-  if(!email||!pass){showToast('Please fill in all fields');return;}
-  if(pass===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Super Admin',phone:'087280007',email});return;}
-  if(pass===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',phone:'096259096',email});return;}
-  if(pass===STAFF_PW){closeModal();loginAs({role:'staff',full_name:'Staff',email});return;}
+  if(!phone||!pass){showToast('Please fill in all fields');return;}
+  if(pass===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Super Admin',phone:'087280007'});return;}
+  if(pass===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',phone:'096259096'});return;}
+  if(pass===STAFF_PW){closeModal();loginAs({role:'staff',full_name:'Staff',phone});return;}
+  // Regular user — lookup by phone or telegram in user_profiles
   try {
-    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error){showToast('Invalid email or password');return;}
-    const {data:profile}=await sb.from('user_profiles').select('*').eq('id',data.user.id).single();
-    closeModal(); loginAs(profile||{role:'retail',full_name:email.split('@')[0],email,id:data.user.id});
-  } catch(e){showToast('Login failed');}
+    const {data,error}=await sb.from('user_profiles')
+      .select('*')
+      .or('phone.eq.'+phone+',telegram.eq.'+phone)
+      .maybeSingle();
+    if(error||!data){showToast('Account not found. Please check your phone/telegram number.');return;}
+    closeModal();
+    loginAs(data);
+    showToast('Welcome back, '+data.full_name+'! 👋');
+  } catch(e){showToast('Login failed. Please try again.');}
 }
 
 async function doRegister() {
@@ -1883,6 +1982,7 @@ function doLogout() {
   currentUser=null;currentRole='public';
   localStorage.removeItem('syl_user');
   sessionStorage.removeItem('syl_admin');
+  sessionStorage.removeItem('syl_tab');
   if(sb) sb.auth.signOut();
   updateAuthUI();renderShop();goTab('shop');showToast('Signed out');
 }
@@ -2430,6 +2530,8 @@ function goTab(tab){
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
   const tabEl=document.getElementById('tab-'+tab); if(tabEl) tabEl.classList.add('active');
   currentTab=tab;
+  // Save active tab so refresh restores it
+  sessionStorage.setItem('syl_tab', tab);
 }
 
 // ── Modal ─────────────────────────────────────────────────────────
