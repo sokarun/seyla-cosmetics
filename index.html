@@ -329,7 +329,7 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
 
 /* Lightbox */
 #lightbox{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.96);display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:0;}
-#lightbox.open{display:flex;animation:lb-in .22s ease;}
+#lightbox.open{display:flex;animation:lb-in .22s ease;touch-action:none;}
 @keyframes lb-in{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
 .lb-img-wrap{width:calc(100vw - 32px);max-width:440px;height:78vh;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;position:relative;touch-action:none;}
 #lightbox img{display:block;width:calc(100vw - 32px);max-width:440px;height:auto;max-height:78vh;object-fit:contain;border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,.7);transform-origin:center center;will-change:transform;user-select:none;-webkit-user-select:none;}
@@ -2595,8 +2595,12 @@ var _lb = {
   scale:1, posX:0, posY:0,
   startDist:0, startScale:1,
   startX:0, startY:0,
-  lastTap:0,
+  lastTap:0, dragging:false,
   MAX:4, MIN:1,
+  active: function() {
+    var lb = document.getElementById('lightbox');
+    return !!(lb && lb.classList.contains('open'));
+  },
   apply: function() {
     var img = document.getElementById('lbImg');
     if (!img) return;
@@ -2604,64 +2608,49 @@ var _lb = {
     img.style.borderRadius = this.scale > 1 ? '0' : '14px';
   },
   clamp: function() {
-    if (this.scale <= 1) { this.posX = 0; this.posY = 0; return; }
+    if (this.scale <= 1) { this.posX=0; this.posY=0; return; }
     var img = document.getElementById('lbImg');
     if (!img) return;
-    var maxX = (img.offsetWidth  * (this.scale - 1)) / 2;
-    var maxY = (img.offsetHeight * (this.scale - 1)) / 2;
+    var maxX = (img.offsetWidth  * (this.scale-1)) / 2;
+    var maxY = (img.offsetHeight * (this.scale-1)) / 2;
     this.posX = Math.max(-maxX, Math.min(maxX, this.posX));
     this.posY = Math.max(-maxY, Math.min(maxY, this.posY));
   },
   reset: function() {
-    this.scale = 1; this.posX = 0; this.posY = 0;
+    this.scale=1; this.posX=0; this.posY=0; this.dragging=false;
     var img = document.getElementById('lbImg');
-    if (img) { img.style.transform = ''; img.style.borderRadius = '14px'; }
+    if (img) { img.style.transform=''; img.style.borderRadius='14px'; }
   },
   init: function() {
-    var lb   = document.getElementById('lightbox');
-    var img  = document.getElementById('lbImg');
     var self = this;
-    if (!lb || !img) return;
 
-    // ── MOUSE WHEEL ZOOM (desktop / Windows) ──
-    lb.addEventListener('wheel', function(e) {
-      if (!lb.classList.contains('open')) return;
-      e.preventDefault();
-      var d = e.deltaY < 0 ? 1.15 : 0.87;
-      self.scale = Math.min(self.MAX, Math.max(self.MIN, self.scale * d));
-      if (self.scale <= self.MIN) { self.scale=1; self.posX=0; self.posY=0; }
-      self.clamp(); self.apply();
-    }, {passive:false});
-
-    // ── PINCH ZOOM & PAN (mobile) ──
-    lb.addEventListener('touchstart', function(e) {
-      if (!lb.classList.contains('open')) return;
+    // ── TOUCH events on document (most reliable for iOS & Android) ──
+    document.addEventListener('touchstart', function(e) {
+      if (!self.active()) return;
       if (e.touches.length === 2) {
         e.preventDefault();
-        var t = e.touches;
-        self.startDist  = Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+        self.startDist  = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
         self.startScale = self.scale;
       } else if (e.touches.length === 1) {
-        self.startX = e.touches[0].clientX - self.posX;
-        self.startY = e.touches[0].clientY - self.posY;
         var now = Date.now();
         if (now - self.lastTap < 280) {
           e.preventDefault();
           if (self.scale > 1) { self.scale=1; self.posX=0; self.posY=0; }
-          else { self.scale = 2.5; }
-          self.apply(); self.lastTap = 0; return;
+          else { self.scale=2.5; }
+          self.apply(); self.lastTap=0; return;
         }
         self.lastTap = now;
+        self.startX = e.touches[0].clientX - self.posX;
+        self.startY = e.touches[0].clientY - self.posY;
       }
     }, {passive:false});
 
-    lb.addEventListener('touchmove', function(e) {
-      if (!lb.classList.contains('open')) return;
+    document.addEventListener('touchmove', function(e) {
+      if (!self.active()) return;
       e.preventDefault();
       if (e.touches.length === 2) {
-        var t = e.touches;
-        var dist = Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
-        self.scale = Math.min(self.MAX, Math.max(self.MIN, self.startScale * (dist/self.startDist)));
+        var dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+        self.scale = Math.min(self.MAX, Math.max(self.MIN, self.startScale*(dist/self.startDist)));
         if (self.scale <= self.MIN) { self.posX=0; self.posY=0; }
         self.apply();
       } else if (e.touches.length === 1 && self.scale > 1) {
@@ -2671,14 +2660,44 @@ var _lb = {
       }
     }, {passive:false});
 
-    lb.addEventListener('touchend', function(e) {
-      if (!lb.classList.contains('open')) return;
-      if (self.scale < self.MIN + 0.05) { self.scale=1; self.posX=0; self.posY=0; }
+    document.addEventListener('touchend', function(e) {
+      if (!self.active()) return;
+      if (self.scale < self.MIN+0.05) { self.scale=1; self.posX=0; self.posY=0; }
       self.clamp(); self.apply();
     }, {passive:true});
+
+    // ── MOUSE WHEEL ZOOM (desktop / Windows) ──
+    document.addEventListener('wheel', function(e) {
+      if (!self.active()) return;
+      e.preventDefault();
+      var d = e.deltaY < 0 ? 1.15 : 0.87;
+      self.scale = Math.min(self.MAX, Math.max(self.MIN, self.scale*d));
+      if (self.scale <= self.MIN) { self.scale=1; self.posX=0; self.posY=0; }
+      self.clamp(); self.apply();
+    }, {passive:false});
+
+    // ── MOUSE DRAG right-click+hold (desktop / Windows) ──
+    document.addEventListener('mousedown', function(e) {
+      if (!self.active() || e.button!==2 || self.scale<=1) return;
+      e.preventDefault();
+      self.dragging=true;
+      self.startX = e.clientX - self.posX;
+      self.startY = e.clientY - self.posY;
+    });
+    document.addEventListener('contextmenu', function(e) {
+      if (self.active() && self.scale>1) e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!self.dragging || !self.active()) return;
+      self.posX = e.clientX - self.startX;
+      self.posY = e.clientY - self.startY;
+      self.clamp(); self.apply();
+    });
+    document.addEventListener('mouseup', function(e) {
+      if (e.button===2) self.dragging=false;
+    });
   }
 };
-// Called from init() after DOM ready
 function initLightboxZoom() { _lb.init(); }
 
 // ── Price Manager ─────────────────────────────────────────────────
