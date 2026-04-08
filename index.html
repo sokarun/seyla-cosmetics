@@ -401,7 +401,7 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
   <div class="topbar">
     <div class="tb-logo"><img src="A1-white.png" alt="Seyla"></div>
     <div class="tb-info">
-      <div class="tb-name">Seyla Cosmetics Co., Ltd</div>
+      <div class="tb-name">SEYLA COSMETICS CO., LTD</div>
       <div class="tb-sub" id="tbSub">Beauty &amp; Health</div>
     </div>
     <div class="tb-actions">
@@ -418,7 +418,7 @@ body.light .tg-arrow{stroke:rgba(0,0,0,.25);}
   <div class="page-wrap">
     <div class="page active" id="page-shop">
       <div class="hero">
-        <div class="hero-bg" style="background-image:none;background-color:#000000;"></div>
+        <div class="hero-bg" style="background-color:#000000;overflow:hidden;"><video autoplay muted loop playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;opacity:0.5;"><source src="bookeh.webm" type="video/webm"></video></div>
         <div class="hero-overlay"></div>
         <div class="hero-content">
           <div class="hero-tag">✦ BEAUTY &amp; HEALTH</div>
@@ -1652,7 +1652,7 @@ function renderSettings() {
     html += '<div class="tg-section"><div class="tg-group"><button class="tg-row" onclick="doLogout()"><div class="tg-row-icon" style="background:#f44336"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round">'+outSvg+'</svg></div><div class="tg-row-body"><div class="tg-row-label" style="color:#f44336">Sign Out</div></div></button></div></div>';
   }
 
-  html += '<div class="tg-version">Seyla Cosmetics App v'+APP_VER+'<br>© 2026 Seyla Cosmetics Co., Ltd<br>Phnom Penh, Cambodia</div>';
+  html += '<div class="tg-version">Seyla Cosmetics App v'+APP_VER+'<br>© 2026 SEYLA COSMETICS CO., LTD<br>Phnom Penh, Cambodia</div>';
   wrap.innerHTML = html;
 }
 
@@ -2508,7 +2508,7 @@ async function processBulkUpload(files){
 // ── Subscription ──────────────────────────────────────────────────
 function subscribeNow(plan,price){
   if(!currentUser){showToast('Please login first');showLogin();return;}
-  openSheet(plan.charAt(0).toUpperCase()+plan.slice(1)+' Plan','<div style="padding:0 0 24px"><div style="background:rgba(201,168,76,.1);border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid rgba(201,168,76,.2)"><div style="font-size:12px;font-weight:600;color:var(--tg-text);margin-bottom:10px">Payment Instructions</div><div style="font-size:12.5px;color:var(--tg-text2);line-height:1.9">1. Transfer <strong style="color:var(--tg-text)">$'+price+'.00 USD</strong><br>&nbsp;&nbsp;&nbsp;ABA Bank: <strong style="color:var(--tg-text)">Seyla Cosmetics Co., Ltd</strong><br><br>2. Screenshot receipt<br>3. Send to <a href="https://t.me/SeylaHotline" style="color:var(--tg-blue)">@SeylaHotline</a><br>4. Activated within 24h</div></div><button class="btn btn-gold" onclick="confirmSub(\''+plan+'\','+price+')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>I\'ve Made the Payment</button><button class="btn btn-outline" onclick="closeModal()" style="margin-top:8px">Cancel</button></div>');
+  openSheet(plan.charAt(0).toUpperCase()+plan.slice(1)+' Plan','<div style="padding:0 0 24px"><div style="background:rgba(201,168,76,.1);border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid rgba(201,168,76,.2)"><div style="font-size:12px;font-weight:600;color:var(--tg-text);margin-bottom:10px">Payment Instructions</div><div style="font-size:12.5px;color:var(--tg-text2);line-height:1.9">1. Transfer <strong style="color:var(--tg-text)">$'+price+'.00 USD</strong><br>&nbsp;&nbsp;&nbsp;ABA Bank: <strong style="color:var(--tg-text)">SEYLA COSMETICS CO., LTD</strong><br><br>2. Screenshot receipt<br>3. Send to <a href="https://t.me/SeylaHotline" style="color:var(--tg-blue)">@SeylaHotline</a><br>4. Activated within 24h</div></div><button class="btn btn-gold" onclick="confirmSub(\''+plan+'\','+price+')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>I\'ve Made the Payment</button><button class="btn btn-outline" onclick="closeModal()" style="margin-top:8px">Cancel</button></div>');
 }
 
 async function confirmSub(plan,price){
