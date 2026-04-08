@@ -1157,7 +1157,7 @@ function renderShop() {
   const container = document.getElementById('shopContent');
   if (!container) return;
   const showManage = ['super_admin','admin'].includes(currentRole);
-  const cats = ['All','Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
+  const cats = ['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
   const popSec = '<div id="popularSection"><div class="sec-hdr"><div style="display:flex;align-items:center"><span class="sec-title">Popular</span><span class="sec-badge">HOT</span></div>'+(showManage?'<button class="sec-action" onclick="goPopularManager()">⚙ Manage</button>':'')+'</div><div class="pop-tabs"><button class="pop-tab active" onclick="setPopTab(\'top\',this)">🔥 Top Picks</button><button class="pop-tab" onclick="setPopTab(\'new\',this)">🆕 New Arrival</button>'+(currentUser?'<button class="pop-tab" onclick="setPopTab(\'history\',this)">🔄 My History</button>':'')+'</div><div class="prod-grid" id="popularGrid"></div><div class="divider"></div></div>';
   const catPills = cats.map(c=>'<button class="cat-pill'+(c==='All'?' active':'')+'" onclick="filterCat(\''+c+'\',this)">'+c+'</button>').join('');
   const catSec = '<div class="cat-scroll" id="catScroll">'+catPills+'</div>';
