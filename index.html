@@ -748,8 +748,7 @@ function buildSubCatTabs(mainTab) {
   const availCats = INV_CAT_ORDER.filter(c => filtered.some(p => p.category === c));
   const color = mainTab === 'low' ? '#FF9800' : '#f44336';
 
-  const tabs = ['all', ...availCats];
-  const row = document.getElementById('invSubCatRow');
+  const tabs = [...availCats];  const row = document.getElementById('invSubCatRow');
   if (!row) return;
 
   row.innerHTML = tabs.map(cat => {
