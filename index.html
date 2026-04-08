@@ -707,7 +707,7 @@ async function showInventory() {
 
   openSheet('Inventory', body);
   invMainTab = 'low';
-  invSubCat  = 'all';
+  invSubCat  = 'Cosmetics';
   buildSubCatTabs('low');
   document.getElementById('invSubCatWrap').style.display = 'block';
   await renderInventoryList();
@@ -715,7 +715,7 @@ async function showInventory() {
 
 async function setInvMainTab(tab, el) {
   invMainTab = tab;
-  invSubCat  = 'all';
+  invSubCat  = 'Cosmetics';
 
   // Update main tab styles
   document.querySelectorAll('.inv-main-tab').forEach(b => {
