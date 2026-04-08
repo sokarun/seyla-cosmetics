@@ -600,7 +600,7 @@ const STAFF_PW     = 'Staff2026';
 const APP_VER      = '3.0.0';
 
 let sb, products = [], cart = [], currentUser = null, currentRole = 'public';
-let catFilter = 'All', searchQuery = '';
+let catFilter = 'Cosmetics', searchQuery = '';
 let whlDiscount = { type:'%', value:0 }; // Admin discount for wholesaler
 let popularTab = 'top';
 let page = 0, pageSize = 30, hasMore = true;
@@ -1159,7 +1159,7 @@ function renderShop() {
   const showManage = ['super_admin','admin'].includes(currentRole);
   const cats = ['Cosmetics','Can','Drinks','Ingredients','Instant','Living','Medicine','Ramen','Snack','Tea & Jam'];
   const popSec = '<div id="popularSection"><div class="sec-hdr"><div style="display:flex;align-items:center"><span class="sec-title">Popular</span><span class="sec-badge">HOT</span></div>'+(showManage?'<button class="sec-action" onclick="goPopularManager()">⚙ Manage</button>':'')+'</div><div class="pop-tabs"><button class="pop-tab active" onclick="setPopTab(\'top\',this)">🔥 Top Picks</button><button class="pop-tab" onclick="setPopTab(\'new\',this)">🆕 New Arrival</button>'+(currentUser?'<button class="pop-tab" onclick="setPopTab(\'history\',this)">🔄 My History</button>':'')+'</div><div class="prod-grid" id="popularGrid"></div><div class="divider"></div></div>';
-  const catPills = cats.map(c=>'<button class="cat-pill'+(c==='All'?' active':'')+'" onclick="filterCat(\''+c+'\',this)">'+c+'</button>').join('');
+  const catPills = cats.map(c=>'<button class="cat-pill'+(c==='Cosmetics'?' active':'')+'" onclick="filterCat(\''+c+'\',this)">'+c+'</button>').join('');
   const catSec = '<div class="cat-scroll" id="catScroll">'+catPills+'</div>';
   const prodSec = '<div id="productsSec"><div class="sec-hdr"><span class="sec-title" id="prodTitle">All Products</span><span style="font-size:11px;color:var(--tg-text2)" id="prodCount"></span></div><div id="productList"></div><div id="loadMoreWrap" class="btn-wrap" style="display:none"><button class="btn btn-outline" style="font-size:12.5px" onclick="loadMore()">Load More</button></div></div>';
   container.innerHTML = popSec + catSec + prodSec;
