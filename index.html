@@ -1868,7 +1868,7 @@ async function doRegister() {
   if (!phone) { showToast('Please enter your phone number'); return; }
   if (!telegram) { showToast('Please enter your Telegram No'); return; }
 
-  const phoneRegex = /^(\+855\s?|0)(1[0-9]|[6-9][0-9])\s?[\d]{3}\s?[\d]{3,4}$/;
+const phoneRegex = /^(\+855|0)\d{8,9}$/;
   if (!phoneRegex.test(phone.replace(/[-\s]/g,''))) {
     if (phoneErr) { phoneErr.style.display='block'; phoneErr.scrollIntoView({behavior:'smooth',block:'nearest'}); }
     showToast('Please enter a valid Cambodia phone number'); return;
