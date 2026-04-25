@@ -1846,24 +1846,6 @@ async function doLogin() {
     loginAs(profile);
   } catch(e){showToast('Login failed. Please try again.');}
 }
-  const phone=document.getElementById('loginEmail')?.value.trim();
-  const pass=document.getElementById('loginPw')?.value;
-  if(!phone||!pass){showToast('Please fill in all fields');return;}
-  if(pass===ADMIN_PW){closeModal();loginAs({role:'super_admin',full_name:'Super Admin',phone:'087280007'});return;}
-  if(pass===MAMI_PW){closeModal();loginAs({role:'admin',full_name:'Administrator',phone:'096259096'});return;}
-  if(pass===STAFF_PW){closeModal();loginAs({role:'staff',full_name:'Staff',phone});return;}
-  // Regular user — lookup by phone or telegram in user_profiles
-  try {
-    const {data,error}=await sb.from('user_profiles')
-      .select('*')
-      .or('phone.eq.'+phone+',telegram.eq.'+phone)
-      .maybeSingle();
-    if(error||!data){showToast('Account not found. Please check your phone/telegram number.');return;}
-    closeModal();
-    loginAs(data);
-    showToast('Welcome back, '+data.full_name+'! 👋');
-  } catch(e){showToast('Login failed. Please try again.');}
-}
 
 async function doRegister() {
   const name     = document.getElementById('rName')?.value.trim();
