@@ -1907,8 +1907,6 @@ const profile={
       tg_verified:document.getElementById('chkTG')?.checked||false,
       fb_verified:document.getElementById('chkFB')?.checked||false,
     };
-      fb_verified:document.getElementById('chkFB')?.checked||false,
-    };
     await sb.from('user_profiles').upsert(profile);
     closeModal();
     if(regType==='wholesale'){
