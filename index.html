@@ -1898,7 +1898,8 @@ async function doRegister() {
     const {data:authData,error:authErr}=await sb.auth.signUp({
       email:phoneToEmail(phone),password:pass
     });
-    if(authErr) throw authErr;
+    if(authErr){showToast('SignUp error: '+authErr.message);return;}
+    showToast('Auth OK, saving profile...');
     const uid=authData.user.id;
 const profile={
       id:uid,full_name:name,phone,telegram_username:telegram||null,
