@@ -621,6 +621,7 @@ let siteSettings = {
 
 async function init() {
   initLightboxZoom();
+  setTimeout(() => document.getElementById('ls').classList.add('hide'), 3000);
   if (!isDark) document.body.classList.add('light');
   try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
   await loadSiteSettings();
@@ -1944,8 +1945,8 @@ function loginAs(profile) {
           if(saved.full_name) currentUser.full_name=saved.full_name;
           if(saved.photo_url) currentUser.photo_url=saved.photo_url;
           sessionStorage.setItem('syl_admin',JSON.stringify(currentUser));
-      updateAuthUI();
-  setTimeout(() => document.getElementById('ls').classList.add('hide'), 3000);
+        updateAuthUI();
+
         }catch(e){}
       }
     });
