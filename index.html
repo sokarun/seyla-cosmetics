@@ -1944,12 +1944,8 @@ function loginAs(profile) {
           if(saved.full_name) currentUser.full_name=saved.full_name;
           if(saved.photo_url) currentUser.photo_url=saved.photo_url;
           sessionStorage.setItem('syl_admin',JSON.stringify(currentUser));
-        updateAuthUI();
-  setTimeout(() => {
-    document.getElementById('ls').querySelector('.ls-logo').classList.add('ls-zoomout');
-    document.getElementById('ls').querySelectorAll('.ls-name,.ls-sub,.ls-bar').forEach(el=>el.classList.add('ls-zoomout'));
-    setTimeout(() => document.getElementById('ls').classList.add('hide'), 500);
-  }, 4000);
+      updateAuthUI();
+  setTimeout(() => document.getElementById('ls').classList.add('hide'), 3000);
         }catch(e){}
       }
     });
