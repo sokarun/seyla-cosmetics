@@ -1900,11 +1900,13 @@ async function doRegister() {
     });
     if(authErr) throw authErr;
     const uid=authData.user.id;
-    const profile={
-      id:uid,full_name:name,phone,telegram:telegram||null,
-      address:address||null,district:district||null,
-      role:assignedRole,business_name:business||null,
+const profile={
+      id:uid,full_name:name,phone,telegram_username:telegram||null,
+      address:address?(address+(district?', '+district:'')):null,
+      role:assignedRole,company_name:business||null,
       tg_verified:document.getElementById('chkTG')?.checked||false,
+      fb_verified:document.getElementById('chkFB')?.checked||false,
+    };
       fb_verified:document.getElementById('chkFB')?.checked||false,
     };
     await sb.from('user_profiles').upsert(profile);
