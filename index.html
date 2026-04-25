@@ -1663,7 +1663,7 @@ function renderSettings() {
   wrap.innerHTML = html;
 }
 function phoneToEmail(phone){
-  return phone.replace(/[\s\-]/g,'')+'@seyla.app';
+  return phone.replace(/[\s\-]/g,'')+'@gmail.com';
 }
 // ── Auth ─────────────────────────────────────────────────────────
 function showLogin() {
@@ -1895,10 +1895,9 @@ async function doRegister() {
   // Wholesale → pending Super Admin approval as 'pending_wholesale'
  // ── Create account ──────────────────────────────────────────
   try {
-    const {data:authData,error:authErr}=await sb.auth.signUp({
-      email:phoneToEmail(phone),password:pass
-    });
+    console.log('signUp result:', authData, authErr);
     if(authErr){showToast('SignUp error: '+authErr.message);return;}
+    showToast('Auth OK, saving profile...');
     showToast('Auth OK, saving profile...');
     const uid=authData.user.id;
 const profile={
