@@ -1907,7 +1907,8 @@ const profile={
       tg_verified:document.getElementById('chkTG')?.checked||false,
       fb_verified:document.getElementById('chkFB')?.checked||false,
     };
-    await sb.from('user_profiles').upsert(profile);
+   const {error:profErr}=await sb.from('user_profiles').upsert(profile);
+    if(profErr){showToast('Error: '+profErr.message);return;}
     closeModal();
     if(regType==='wholesale'){
       showToast('Account created! Waiting for admin approval.');
